@@ -1,0 +1,46 @@
+name: build ipa
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build unsigned ipa
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project GestaltTweak.xcodeproj \
+            -scheme GestaltTweak \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+          rm -rf Payload GestaltTweak.ipa
+          mkdir -p Payload
+
+          APP_PATH="$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -print -quit)"
+          cp -R "$APP_PATH" Payload/
+
+          ditto -c -k --keepParent Payload GestaltTweak.ipa
+          rm -rf Payload
+
+      - name: upload ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: GestaltTweak-ipa
+          path: GestaltTweak.ipa
+          if-no-files-found: error
