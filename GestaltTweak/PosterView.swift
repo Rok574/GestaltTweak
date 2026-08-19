@@ -26,15 +26,19 @@ struct PosterView: View {
                 Button {
                     apply()
                 } label: {
-                    if busy {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        Label("Apply", systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity)
+                    HStack {
+                        Spacer()
+                        if busy {
+                            ProgressView()
+                        } else {
+                            Label("Apply", systemImage: "checkmark.circle.fill")
+                        }
+                        Spacer()
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.indigo)
                 .disabled(viewModel.posterFiles.isEmpty || busy)
 
                 Button {

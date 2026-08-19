@@ -43,7 +43,7 @@ struct ContentView: View {
                                     icon: "square.and.pencil",
                                     tint: .blue,
                                     title: "Advanced Fields",
-                                    subtitle: "Hand-edit any raw key"
+                                    subtitle: "Edit raw MobileGestalt keys"
                                 )
                             }
                             NavigationLink {
@@ -73,20 +73,28 @@ struct ContentView: View {
                             Button {
                                 viewModel.runExploit()
                             } label: {
-                                Label("Run Exploit", systemImage: "bolt.fill")
-                                    .frame(maxWidth: .infinity)
+                                HStack {
+                                    Spacer()
+                                    Label("Run Exploit", systemImage: "bolt.fill")
+                                    Spacer()
+                                }
                             }
                             .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
                             .tint(.green)
                             .disabled(viewModel.isBusy)
 
                             Button {
                                 viewModel.respring()
                             } label: {
-                                Label("Respring", systemImage: "arrow.counterclockwise")
-                                    .frame(maxWidth: .infinity)
+                                HStack {
+                                    Spacer()
+                                    Label("Respring", systemImage: "arrow.counterclockwise")
+                                    Spacer()
+                                }
                             }
                             .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
                             .tint(.red)
                             .disabled(viewModel.isRespringing)
                         }
