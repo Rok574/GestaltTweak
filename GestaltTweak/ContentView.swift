@@ -242,14 +242,24 @@ private struct TweakWorkbench: View {
     var body: some View {
         List {
             if viewModel.plist != nil {
+                Section {
+                    Button {
+                        viewModel.revertTweaks()
+                    } label: {
+                        Label("Revert Tweaks", systemImage: "arrow.uturn.backward")
+                    }
+                    .disabled(viewModel.isBusy)
+                } footer: {
+                    Text("Restores the stock snapshot, undoing every applied tweak.")
+                }
+
                 if deviceIdentityMatchesQuery {
                     Section {
-                        Picker("Dynamic Island Subtype", selection: Binding<DynamicIslandSelection>(
+                        Picker("Subtype", selection: Binding<DynamicIslandSelection>(
                             get: { viewModel.displayedSubtypeSelection },
                             set: { viewModel.setDynamicIslandSelection($0) }
                         )) {
                             Text("Original").tag(DynamicIslandSelection.original)
-                            Text("No Change").tag(DynamicIslandSelection.noChange)
                             ForEach(DynamicIslandOption.all) { option in
                                 Text("\(option.subtype) · \(option.title)").tag(DynamicIslandSelection.subtype(option.subtype))
                             }
@@ -265,7 +275,7 @@ private struct TweakWorkbench: View {
                     } header: {
                         Text("Device Identity")
                     } footer: {
-                        Text("The subtype picker writes ArtworkDeviceSubType and the Dynamic Island support flag. No Change leaves the current value; Original restores the stock value.")
+                        Text("The subtype picker writes ArtworkDeviceSubType and the Dynamic Island support flag. Original restores the stock value.")
                     }
                 }
 

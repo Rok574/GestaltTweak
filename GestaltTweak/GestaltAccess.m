@@ -57,6 +57,26 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
     return YES;
 }
 
+/// Reads the whole file through the given descriptor, returning nil on error.
+/// Used to verify an in-place write against the exact bytes we just wrote,
+/// avoiding the race of reopening the path (the system may rewrite the cache
+/// file between our write and a separate read).
+static NSData *GestaltReadAll(int fd)
+{
+    NSMutableData *buffer = [NSMutableData data];
+    uint8_t chunk[64 * 1024];
+    while (1) {
+        ssize_t count = read(fd, chunk, sizeof(chunk));
+        if (count > 0) {
+            [buffer appendBytes:chunk length:(NSUInteger)count];
+            continue;
+        }
+        if (count == 0) return buffer;
+        if (errno == EINTR) continue;
+        return nil;
+    }
+}
+
 @interface GestaltAccess ()
 @property (nonatomic, assign) BOOL isConnected;
 @property (nonatomic, copy) NSString *plistPath;
@@ -281,9 +301,35 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
         return NO;
     }
 
+    // Retry once with a freshly re-acquired sandbox extension: the OS may have
+    // revoked the lease while the app was backgrounded, which makes the first
+    // open fail even though the tweak was never applied.
+    for (int attempt = 0; ; attempt++) {
+        NSError *writeError = nil;
+        BOOL ok = [self writeData:data
+                     overOriginal:original
+                           atPath:targetPath
+                            error:&writeError];
+        if (ok) {
+            if (error) *error = nil;
+            return YES;
+        }
+        if (attempt >= 1 || ![self refreshSandboxExtensionWithError:&writeError]) {
+            if (error) *error = writeError;
+            return NO;
+        }
+    }
+}
+
+/// The in-place / atomic write itself, including rollback and verification.
+- (BOOL)writeData:(NSData *)data
+     overOriginal:(NSData *)original
+           atPath:(NSString *)targetPath
+            error:(NSError **)error
+{
     if (GestaltAccess.writesInPlace) {
         int fd = open(targetPath.fileSystemRepresentation,
-                      O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+                      O_RDWR | O_CLOEXEC | O_NOFOLLOW);
         if (fd < 0) {
             if (error) *error = GestaltError(9,
                 [NSString stringWithFormat:@"Failed to open the plist (errno=%d).", errno]);
@@ -296,14 +342,22 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
             fsync(fd) == 0;
         int writeErrno = errno;
 
-        if (!wrote) {
+        BOOL verified = NO;
+        if (wrote && lseek(fd, 0, SEEK_SET) >= 0) {
+            NSData *readback = GestaltReadAll(fd);
+            verified = readback != nil && [readback isEqualToData:data];
+        }
+
+        if (!wrote || !verified) {
             ftruncate(fd, 0);
             lseek(fd, 0, SEEK_SET);
             GestaltWriteAll(fd, original);
             fsync(fd);
             close(fd);
-            if (error) *error = GestaltError(10,
-                [NSString stringWithFormat:@"Failed to write the plist (errno=%d).", writeErrno]);
+            if (error) *error = GestaltError(verified ? 10 : 11,
+                verified
+                    ? [NSString stringWithFormat:@"Failed to write the plist (errno=%d).", writeErrno]
+                    : @"Post-write verification failed.");
             return NO;
         }
         close(fd);
@@ -336,16 +390,27 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
             return NO;
         }
         [[NSFileManager defaultManager] removeItemAtPath:tempPath error:NULL];
-    }
 
-    NSData *verification = [NSData dataWithContentsOfFile:targetPath];
-    if (![verification isEqualToData:data]) {
-        if (error) *error = GestaltError(11, @"Post-write verification failed.");
-        return NO;
+        NSData *verification = [NSData dataWithContentsOfFile:targetPath];
+        if (![verification isEqualToData:data]) {
+            if (error) *error = GestaltError(11, @"Post-write verification failed.");
+            return NO;
+        }
     }
 
     if (error) *error = nil;
     return YES;
+}
+
+/// Drops the current sandbox extension and connection state, then re-runs the
+/// exploit so the next write starts with a fresh lease.
+- (BOOL)refreshSandboxExtensionWithError:(NSError **)error
+{
+    [_activeBadQueryLease invalidate];
+    _activeBadQueryLease = nil;
+    self.isConnected = NO;
+    self.plistPath = nil;
+    return [self connectWithError:error];
 }
 
 @end

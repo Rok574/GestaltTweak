@@ -96,7 +96,7 @@ final class GestaltViewModel: ObservableObject {
     }
 
     /// What the subtype picker should show right now, mirroring the applied
-    /// value so it is "detected" rather than defaulting to No Change.
+    /// value so it is "detected" rather than defaulting to the stock value.
     var displayedSubtypeSelection: DynamicIslandSelection {
         if let stagedSubtype {
             switch stagedSubtype {
@@ -106,14 +106,12 @@ final class GestaltViewModel: ObservableObject {
         } else if let current = currentSubtype {
             return .subtype(current)
         } else {
-            return .noChange
+            return .original
         }
     }
 
     func setDynamicIslandSelection(_ selection: DynamicIslandSelection) {
         switch selection {
-        case .noChange:
-            stagedSubtype = nil
         case .original:
             stagedSubtype = .restore
         case .subtype(let value):
@@ -320,7 +318,6 @@ final class GestaltViewModel: ObservableObject {
                 }
                 try pending.apply(definition: definition)
             }
-
             if let stagedSubtype {
                 switch stagedSubtype {
                 case .set(let value):
@@ -371,16 +368,36 @@ final class GestaltViewModel: ObservableObject {
             }
 
             save(pending, expectedAIRegion: expectedConfiguration) { [weak self] in
-                self?.selectedTweaks.removeAll()
-                self?.removedTweaks.removeAll()
-                self?.stagedSubtype = nil
-                self?.stagesModelName = false
-                self?.unstagesModelName = false
-                self?.stagesAIRegion = false
-                self?.unstageAIRegion = false
+                self?.clearStaging()
             }
         } catch {
             report(error)
+        }
+    }
+
+    /// Clears every staged but not yet applied change.
+    func clearStaging() {
+        selectedTweaks.removeAll()
+        removedTweaks.removeAll()
+        stagedSubtype = nil
+        stagesModelName = false
+        unstagesModelName = false
+        stagesAIRegion = false
+        unstageAIRegion = false
+    }
+
+    /// Writes the stock snapshot back, undoing every applied tweak at once.
+    func revertTweaks() {
+        guard !isBusy else { return }
+        guard let snapshot = GestaltBackupStore.loadStockSnapshot() else {
+            notice = GestaltNotice(
+                kind: .error,
+                message: "No stock snapshot is available to revert to. Reopen the app once to capture one."
+            )
+            return
+        }
+        save(GestaltPlist(dict: snapshot), expectedAIRegion: nil) { [weak self] in
+            self?.clearStaging()
         }
     }
 
@@ -484,35 +501,46 @@ final class GestaltViewModel: ObservableObject {
 
         var wrote = false
         do {
-            let originalData = try access.readGestaltData()
-            _ = try GestaltBackupStore.create(from: originalData)
+            // Backup is best-effort: a transient read or backup failure must
+            // never block the write itself. The stock snapshot captured at
+            // load time remains the primary safety net for reverts.
+            if let originalData = try? access.readGestaltData() {
+                do {
+                    _ = try GestaltBackupStore.create(from: originalData)
+                } catch {
+                    print("(gestalt) backup skipped: \(error.localizedDescription)")
+                }
+            }
             try access.saveGestalt(pendingPlist.dict)
             wrote = true
 
-            guard let verification = try access.readGestalt() as? [String: Any] else {
-                throw GestaltEditError.invalidPlist
-            }
-            let verifiedPlist = GestaltPlist(dict: verification)
+            // The bytes were already verified by saveGestalt; this re-read
+            // refreshes the in-memory copy and double-checks the AI region.
+            if let verification = try? access.readGestalt() as? [String: Any] {
+                let verifiedPlist = GestaltPlist(dict: verification)
 
-            if let expectedAIRegion {
-                let cacheExtra = verifiedPlist.cacheExtra
-                guard cacheExtra["h63QSdBCiT/z0WU6rdQv6Q"] as? String == "LL",
-                      cacheExtra["yK+xavymRGZ3xWc1tb8XDg"] as? String == "LL/A",
-                      cacheExtra["97JDvERpVwO+GHtthIh7hA"] as? String == expectedAIRegion.profile.regulatoryModel else {
-                    throw GestaltEditError.verificationFailed
-                }
-                if expectedAIRegion.requiresDeviceSpoofing {
-                    guard cacheExtra["A62OafQ85EJAiiqKn4agtg"] as? Int == 1,
-                          cacheExtra["h9jDsbgj7xIVeIQ8S3/X3Q"] as? String == expectedAIRegion.spoofedProductType,
-                          cacheExtra["oYicEKzVTz4/CxxE05pEgQ"] as? String == expectedAIRegion.spoofedHardwareModel,
-                          cacheExtra["5pYKlGnYYBzGvAlIU8RjEQ"] as? String == expectedAIRegion.spoofedCPUModel else {
+                if let expectedAIRegion {
+                    let cacheExtra = verifiedPlist.cacheExtra
+                    guard cacheExtra["h63QSdBCiT/z0WU6rdQv6Q"] as? String == "LL",
+                          cacheExtra["yK+xavymRGZ3xWc1tb8XDg"] as? String == "LL/A",
+                          cacheExtra["97JDvERpVwO+GHtthIh7hA"] as? String == expectedAIRegion.profile.regulatoryModel else {
                         throw GestaltEditError.verificationFailed
                     }
+                    if expectedAIRegion.requiresDeviceSpoofing {
+                        guard cacheExtra["A62OafQ85EJAiiqKn4agtg"] as? Int == 1,
+                              cacheExtra["h9jDsbgj7xIVeIQ8S3/X3Q"] as? String == expectedAIRegion.spoofedProductType,
+                              cacheExtra["oYicEKzVTz4/CxxE05pEgQ"] as? String == expectedAIRegion.spoofedHardwareModel,
+                              cacheExtra["5pYKlGnYYBzGvAlIU8RjEQ"] as? String == expectedAIRegion.spoofedCPUModel else {
+                            throw GestaltEditError.verificationFailed
+                        }
+                    }
                 }
-            }
 
-            plist = verifiedPlist
-            isDirty = false
+                plist = verifiedPlist
+                isDirty = false
+            } else {
+                print("(gestalt) could not re-read the plist after a successful write")
+            }
         } catch {
             isDirty = true
             report(error)
@@ -600,7 +628,6 @@ enum DynamicIslandChange: Hashable {
 
 /// What the subtype picker currently shows.
 enum DynamicIslandSelection: Hashable {
-    case noChange
     case original
     case subtype(Int)
 }
