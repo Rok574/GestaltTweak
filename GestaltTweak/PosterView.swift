@@ -26,13 +26,15 @@ struct PosterView: View {
                 Button {
                     apply()
                 } label: {
-                    HStack(spacing: 8) {
-                        if busy { ProgressView() }
+                    if busy {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                    } else {
                         Label("Apply", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 12))
                 .disabled(viewModel.posterFiles.isEmpty || busy)
 
                 Button {
@@ -40,8 +42,6 @@ struct PosterView: View {
                 } label: {
                     Label("Reset", systemImage: "arrow.counterclockwise")
                 }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle(radius: 12))
                 .disabled(busy)
             } footer: {
                 Text("Writes the imported packs into PosterBoard and restarts it.")

@@ -77,8 +77,6 @@ struct ContentView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
-                            .buttonBorderShape(.roundedRectangle(radius: 12))
-                            .controlSize(.large)
                             .tint(.green)
                             .disabled(viewModel.isBusy)
 
@@ -89,8 +87,6 @@ struct ContentView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
-                            .buttonBorderShape(.roundedRectangle(radius: 12))
-                            .controlSize(.large)
                             .tint(.red)
                             .disabled(viewModel.isRespringing)
                         }
