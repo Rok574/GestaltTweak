@@ -31,10 +31,10 @@ struct PosterView: View {
                             ProgressView()
                             Text("Applying")
                         }
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(.indigo)
                     } else {
                         Label("Apply", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(.indigo)
                     }
                 }
                 .disabled(viewModel.posterFiles.isEmpty || busy)
