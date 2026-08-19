@@ -2,7 +2,6 @@
 //  SettingsView.swift
 //  GestaltTweak
 //
-//  Settings sheet modeled after rooootdev/mond's SettingsView (AGPL-3.0).
 //  Licensed under the MIT License.
 //
 
@@ -15,6 +14,7 @@ struct SettingsView: View {
 
     @AppStorage("method") private var method = "bad_query"
     @AppStorage("dismiss_after_import") private var dismissAfterImport = false
+    @AppStorage("backup_before_write") private var backupBeforeWrite = true
 
     @State private var showsRespringConfirmation = false
 
@@ -32,7 +32,6 @@ struct SettingsView: View {
 
                     Button {
                         viewModel.runExploit()
-                        dismiss()
                     } label: {
                         Text("Run Exploit")
                     }
@@ -45,11 +44,13 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Backup before every write", isOn: $backupBeforeWrite)
+
                     Toggle("Dismiss after importing", isOn: $dismissAfterImport)
                 } header: {
                     Label("Preferences", systemImage: "gear")
                 } footer: {
-                    Text("Dismiss after importing closes the wallpaper explorer once a pack is saved. All writes rewrite MobileGestalt in-place on the same inode so iOS keeps the file after a restart.")
+                    Text("Backup before every write saves a copy of the current MobileGestalt next to the stock snapshot before each write. Dismiss after importing closes the wallpaper explorer once a pack is saved. All writes rewrite MobileGestalt in-place on the same inode so iOS keeps the file after a restart.")
                 }
 
                 Section {
@@ -75,6 +76,11 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemGroupedBackground))
+            .tint(.indigo)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") { dismiss() }
@@ -85,6 +91,13 @@ struct SettingsView: View {
                 Button("Confirm") { viewModel.respring() }
             } message: {
                 Text("Confirm that you want to respring.")
+            }
+            .alert(item: $viewModel.notice) { notice in
+                Alert(
+                    title: Text(notice.title),
+                    message: Text(notice.message),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
     }

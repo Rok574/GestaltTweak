@@ -22,8 +22,10 @@ GestaltTweak is a native SwiftUI app for iOS that edits `com.apple.MobileGestalt
 
 ---
 
-> ⚠️ **Disclaimer & Warning**  
-> GestaltTweak uses private APIs and modifies system cache files. Modifying incorrect keys can cause feature instability, UI glitches, or bootloops. Use this tool responsibly and at your own risk. Always ensure you have a backup saved.
+<p style="color: red;">
+  ⚠️ <strong>Disclaimer &amp; Warning</strong><br>
+  GestaltTweak uses private APIs and modifies system cache files. Modifying incorrect keys can cause feature instability, UI glitches, or bootloops. Use this tool responsibly and at your own risk. Always ensure you have a backup saved.
+</p>
 
 ---
 

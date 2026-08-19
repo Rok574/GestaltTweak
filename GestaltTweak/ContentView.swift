@@ -21,6 +21,8 @@ struct ContentView: View {
                     List {
                         Section {
                             deviceRow
+                                .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+                                .listRowBackground(Color(.secondarySystemGroupedBackground))
                         }
 
                         Section("Modules") {
@@ -65,29 +67,41 @@ struct ContentView: View {
                                 )
                             }
                         }
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
 
                         Section("Actions") {
                             Button {
                                 viewModel.runExploit()
                             } label: {
-                                actionRow(
-                                    icon: "bolt.fill",
-                                    tint: .green,
-                                    title: "Run Exploit"
-                                )
+                                Label("Run Exploit", systemImage: "bolt.fill")
+                                    .frame(maxWidth: .infinity)
                             }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.roundedRectangle(radius: 12))
+                            .controlSize(.large)
+                            .tint(.green)
+                            .disabled(viewModel.isBusy)
+
                             Button {
                                 viewModel.respring()
                             } label: {
-                                actionRow(
-                                    icon: "arrow.counterclockwise",
-                                    tint: .red,
-                                    title: "Respring"
-                                )
+                                Label("Respring", systemImage: "arrow.counterclockwise")
+                                    .frame(maxWidth: .infinity)
                             }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.roundedRectangle(radius: 12))
+                            .controlSize(.large)
+                            .tint(.red)
+                            .disabled(viewModel.isRespringing)
                         }
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     }
                     .navigationTitle("GestaltTweak")
+                    .navigationBarTitleDisplayMode(.large)
+                    .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
+                    .background(Color(.systemGroupedBackground))
+                    .tint(.indigo)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
@@ -182,9 +196,9 @@ struct ContentView: View {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 30, height: 30)
+                .frame(width: 34, height: 34)
                 .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(tint)
                 )
 
@@ -196,26 +210,9 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Spacer(minLength: 8)
         }
-    }
-
-    private func actionRow(
-        icon: String,
-        tint: Color,
-        title: String
-    ) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 30, height: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(tint)
-                )
-            Text(title)
-                .font(.body)
-        }
+        .padding(.vertical, 3)
     }
 }
 

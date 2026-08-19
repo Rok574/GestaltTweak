@@ -26,21 +26,22 @@ struct PosterView: View {
                 Button {
                     apply()
                 } label: {
-                    HStack {
-                        if busy {
-                            ProgressView()
-                        }
-
-                        Text("Apply")
+                    HStack(spacing: 8) {
+                        if busy { ProgressView() }
+                        Label("Apply", systemImage: "checkmark.circle.fill")
                     }
                 }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 12))
                 .disabled(viewModel.posterFiles.isEmpty || busy)
 
                 Button {
                     reset()
                 } label: {
-                    Text("Reset")
+                    Label("Reset", systemImage: "arrow.counterclockwise")
                 }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.roundedRectangle(radius: 12))
                 .disabled(busy)
             } footer: {
                 Text("Writes the imported packs into PosterBoard and restarts it.")
@@ -50,14 +51,14 @@ struct PosterView: View {
                 Button {
                     show_importer = true
                 } label: {
-                    Text("Import Tendies")
+                    Label("Import Tendies", systemImage: "square.and.arrow.down")
                 }
                 .disabled(busy)
 
                 Button {
                     show_explorer = true
                 } label: {
-                    Text("Explore Tendies")
+                    Label("Explore Tendies", systemImage: "sparkles")
                 }
                 .disabled(busy)
             } footer: {
@@ -79,6 +80,10 @@ struct PosterView: View {
         }
         .navigationTitle("PosterBoard")
         .navigationBarTitleDisplayMode(.large)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
+        .tint(.indigo)
         .sheet(isPresented: $show_explorer) {
             TendiesView()
         }

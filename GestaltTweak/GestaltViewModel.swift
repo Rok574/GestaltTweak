@@ -1,10 +1,3 @@
-//
-//  GestaltViewModel.swift
-//  GestaltTweak
-//
-//  Licensed under the MIT License. Portions derived from frs0n/GestaltEdit.
-//
-
 import Combine
 import Foundation
 import SwiftUI
@@ -30,15 +23,8 @@ final class GestaltViewModel: ObservableObject {
 
     private let access = GestaltAccess.shared()
 
-    /// Baseline values used to unapply tweaks. This is the stock snapshot
-    /// captured on first read (persisted so it survives resprings), falling
-    /// back to the session-start state. Unapplying restores these values
-    /// instead of deleting the keys outright, which could corrupt the
-    /// MobileGestalt schema and block later writes.
     private var pristineCacheExtra: [String: Any]?
 
-    /// Top-level CacheData from the same baseline, used to undo the iPadOS
-    /// mode patch when that tweak is unapplied.
     private var pristineCacheData: Data?
 
     var aiRegionProfile: AIRegionProfile? {
@@ -49,22 +35,20 @@ final class GestaltViewModel: ObservableObject {
         plist != nil && aiRegionProfile == nil
     }
 
-    var isAIRegionConfigured: Bool {
-        guard let profile = aiRegionProfile,
-              let cacheExtra = plist?.cacheExtra else { return false }
-        return cacheExtra["h63QSdBCiT/z0WU6rdQv6Q"] as? String == "LL"
-            && cacheExtra["yK+xavymRGZ3xWc1tb8XDg"] as? String == "LL/A"
-            && cacheExtra["97JDvERpVwO+GHtthIh7hA"] as? String == profile.regulatoryModel
+       var isAppleIntelligenceTweaked: Bool {
+        guard let cacheExtra = plist?.cacheExtra else { return false }
+        let pristine = pristineCacheExtra ?? cacheExtra
+        return Self.aiRegionKeys.contains { key in
+            aiKey(key, differsIn: cacheExtra, from: pristine)
+        }
     }
 
     var aiRegionToggleState: Bool {
         if unstageAIRegion { return false }
         if stagesAIRegion { return true }
-        return isAIRegionConfigured
+        return isAppleIntelligenceTweaked
     }
 
-    /// A custom model name is "on" when the current artwork description
-    /// differs from the stock baseline, plus any pending stage.
     var modelNameToggleState: Bool {
         if unstagesModelName { return false }
         if stagesModelName { return true }
@@ -87,7 +71,6 @@ final class GestaltViewModel: ObservableObject {
         return artwork["ArtworkDeviceProductDescription"] as? String
     }
 
-    /// The subtype currently in the plist, if the artwork dictionary has one.
     var currentSubtype: Int? {
         guard let artwork = plist?.cacheExtra[Self.artworkKey] as? [String: Any] else {
             return nil
@@ -95,8 +78,6 @@ final class GestaltViewModel: ObservableObject {
         return artwork["ArtworkDeviceSubType"] as? Int
     }
 
-    /// What the subtype picker should show right now, mirroring the applied
-    /// value so it is "detected" rather than defaulting to the stock value.
     var displayedSubtypeSelection: DynamicIslandSelection {
         if let stagedSubtype {
             switch stagedSubtype {
@@ -266,9 +247,6 @@ final class GestaltViewModel: ObservableObject {
         return result
     }
 
-    /// True when the tweak's values are present right now and differ from the
-    /// stock snapshot baseline. Stock keys that ship with the same value as
-    /// the tweak are not treated as "applied".
     private func isCurrentlyApplied(_ id: GestaltTweakID) -> Bool {
         guard let definition = GestaltTweakCatalog.definition(for: id),
               let cacheExtra = plist?.cacheExtra else { return false }
@@ -289,7 +267,7 @@ final class GestaltViewModel: ObservableObject {
             }
         } else {
             stagesAIRegion = false
-            unstageAIRegion = isAIRegionConfigured
+            unstageAIRegion = isAppleIntelligenceTweaked
         }
     }
 
@@ -379,7 +357,6 @@ final class GestaltViewModel: ObservableObject {
         }
     }
 
-    /// Clears every staged but not yet applied change.
     func clearStaging() {
         selectedTweaks.removeAll()
         removedTweaks.removeAll()
@@ -390,7 +367,6 @@ final class GestaltViewModel: ObservableObject {
         unstageAIRegion = false
     }
 
-    /// Writes the stock snapshot back, undoing every applied tweak at once.
     func revertTweaks() {
         guard !isBusy else { return }
         guard let snapshot = GestaltBackupStore.loadStockSnapshot() else {
@@ -505,10 +481,8 @@ final class GestaltViewModel: ObservableObject {
 
         var wrote = false
         do {
-            // Backup is best-effort: a transient read or backup failure must
-            // never block the write itself. The stock snapshot captured at
-            // load time remains the primary safety net for reverts.
-            if let originalData = try? access.readGestaltData() {
+            if UserDefaults.standard.object(forKey: "backup_before_write") != false,
+               let originalData = try? access.readGestaltData() {
                 do {
                     _ = try GestaltBackupStore.create(from: originalData)
                 } catch {
@@ -518,8 +492,6 @@ final class GestaltViewModel: ObservableObject {
             try access.saveGestalt(pendingPlist.dict)
             wrote = true
 
-            // The bytes were already verified by saveGestalt; this re-read
-            // refreshes the in-memory copy and double-checks the AI region.
             if let verification = try? access.readGestalt() as? [String: Any] {
                 let verifiedPlist = GestaltPlist(dict: verification)
 
@@ -551,8 +523,6 @@ final class GestaltViewModel: ObservableObject {
         }
 
         if wrote {
-            // The write went through, so stop reporting these as pending even
-            // if the post-write readback/verification failed.
             completion?()
             refreshBackups()
             isRespringing = true
@@ -569,6 +539,7 @@ final class GestaltViewModel: ObservableObject {
     private static let aiRegionKeys = [
         "h63QSdBCiT/z0WU6rdQv6Q",
         "yK+xavymRGZ3xWc1tb8XDg",
+        "zHeENZu+wbg7PUprwNwBWg",
         "97JDvERpVwO+GHtthIh7hA",
         "A62OafQ85EJAiiqKn4agtg",
         "h9jDsbgj7xIVeIQ8S3/X3Q",
@@ -576,9 +547,29 @@ final class GestaltViewModel: ObservableObject {
         "5pYKlGnYYBzGvAlIU8RjEQ"
     ]
 
-    /// Puts a key back the way it was when the plist was loaded. Keys that did
-    /// not exist before are removed; keys that shipped with a value (usually 0)
-    /// are restored to that value rather than being deleted.
+    private func aiKey(_ key: String, differsIn current: [String: Any], from pristine: [String: Any]) -> Bool {
+        switch (current[key], pristine[key]) {
+        case (nil, nil):
+            return false
+        case (nil, _):
+            return false
+        case (_, nil):
+            return true
+        case (let currentValue?, let pristineValue?):
+            return !Self.aiValuesEqual(currentValue, pristineValue)
+        }
+    }
+
+    private static func aiValuesEqual(_ lhs: Any, _ rhs: Any) -> Bool {
+        if let l = lhs as? NSNumber, let r = rhs as? NSNumber {
+            return l == r
+        }
+        if let l = lhs as? String, let r = rhs as? String {
+            return l == r
+        }
+        return false
+    }
+
     private func restoreCacheExtraValue(forKey key: String, in pending: inout GestaltPlist) {
         if let pristine = pristineCacheExtra?[key] {
             pending.setCacheExtra(pristine, forKey: key)
@@ -587,19 +578,12 @@ final class GestaltViewModel: ObservableObject {
         }
     }
 
-    /// Sets the unapply baseline from the freshly read plist. The first ever
-    /// successful read is persisted as the stock snapshot; every later load
-    /// reuses that snapshot so tweaks stay reversible across resprings.
     private func captureBaseline(from dictionary: [String: Any]) {
         if let snapshot = GestaltBackupStore.loadStockSnapshot(),
            snapshot["CacheExtra"] is [String: Any] {
             pristineCacheExtra = snapshot["CacheExtra"] as? [String: Any]
             pristineCacheData = snapshot["CacheData"] as? Data
         } else {
-            // The device may already carry tweaks applied by another tool
-            // (Nugget, mond, ...). Clean provably tweak-only keys out of the
-            // captured snapshot so Revert Tweaks restores a true stock state
-            // instead of freezing the tweaked values in forever.
             let clean = Self.cleanedBaseline(from: dictionary)
             GestaltBackupStore.saveStockSnapshot(clean)
             pristineCacheExtra = clean["CacheExtra"] as? [String: Any]
@@ -607,10 +591,6 @@ final class GestaltViewModel: ObservableObject {
         }
     }
 
-    /// Removes keys that never ship on stock devices from a possibly-tweaked
-    /// plist. Keys that legitimately ship on some hardware (Face ID, the
-    /// Dynamic Island subtype, charge limit, camera control, ...) are left
-    /// untouched: removing them could break hardware features.
     private static func cleanedBaseline(from dictionary: [String: Any]) -> [String: Any] {
         guard var cacheExtra = dictionary["CacheExtra"] as? [String: Any] else {
             return dictionary
@@ -631,7 +611,6 @@ final class GestaltViewModel: ObservableObject {
         }
     }
 
-    /// Puts the artwork's product description back to the stock baseline name.
     private func restoreArtworkProductDescription(in pending: inout GestaltPlist) {
         guard var artwork = pending.cacheExtra[Self.artworkKey] as? [String: Any] else {
             return
@@ -647,13 +626,11 @@ final class GestaltViewModel: ObservableObject {
     }
 }
 
-/// A pending write for the Dynamic Island subtype.
 enum DynamicIslandChange: Hashable {
     case set(Int)
     case restore
 }
 
-/// What the subtype picker currently shows.
 enum DynamicIslandSelection: Hashable {
     case original
     case subtype(Int)

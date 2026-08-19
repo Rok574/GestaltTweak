@@ -6,7 +6,7 @@
 //       class 13, MobileGestalt SystemGroup, part 3, target absolute path,
 //       flags 0x8000000000; directly consumes the sandbox token
 //
-//  Licensed under the MIT License. Portions derived from frs0n/GestaltEdit.
+//  Licensed under the MIT License.
 //
 
 #import "GestaltAccess.h"
