@@ -73,29 +73,27 @@ struct ContentView: View {
                             Button {
                                 viewModel.runExploit()
                             } label: {
-                                HStack {
-                                    Spacer()
-                                    Label("Run Exploit", systemImage: "bolt.fill")
-                                    Spacer()
-                                }
+                                moduleRow(
+                                    icon: "bolt.fill",
+                                    tint: .green,
+                                    title: "Run Exploit",
+                                    subtitle: "Reconnect to MobileGestalt"
+                                )
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.large)
-                            .tint(.green)
+                            .buttonStyle(.plain)
                             .disabled(viewModel.isBusy)
 
                             Button {
                                 viewModel.respring()
                             } label: {
-                                HStack {
-                                    Spacer()
-                                    Label("Respring", systemImage: "arrow.counterclockwise")
-                                    Spacer()
-                                }
+                                moduleRow(
+                                    icon: "arrow.counterclockwise",
+                                    tint: .red,
+                                    title: "Respring",
+                                    subtitle: "Refresh SpringBoard"
+                                )
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.large)
-                            .tint(.red)
+                            .buttonStyle(.plain)
                             .disabled(viewModel.isRespringing)
                         }
                         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
