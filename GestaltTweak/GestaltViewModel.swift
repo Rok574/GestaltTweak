@@ -20,10 +20,12 @@ final class GestaltViewModel: ObservableObject {
     @Published var selectedTweaks: Set<GestaltTweakID> = []
     @Published private(set) var removedTweaks: Set<GestaltTweakID> = []
     @Published var dynamicIslandSubtype: Int?
-    @Published var changesModelName = false
     @Published var modelName = ""
+    @Published private(set) var stagesModelName = false
+    @Published private(set) var unstagesModelName = false
     @Published var stagesAIRegion = false
     @Published private(set) var unstageAIRegion = false
+    @Published var restoreDeviceIdentity = false
     @Published private(set) var isRespringing = false
     @Published var posterFiles: [URL] = []
 
@@ -62,13 +64,39 @@ final class GestaltViewModel: ObservableObject {
         return isAIRegionConfigured
     }
 
+    /// A custom model name is "on" when the current artwork description
+    /// differs from the stock baseline, plus any pending stage.
+    var modelNameToggleState: Bool {
+        if unstagesModelName { return false }
+        if stagesModelName { return true }
+        return isCustomModelNameApplied
+    }
+
+    var isCustomModelNameApplied: Bool {
+        guard let current = currentArtworkProductDescription,
+              let pristine = pristineCacheExtra?[Self.artworkKey] as? [String: Any],
+              let stock = pristine["ArtworkDeviceProductDescription"] as? String else {
+            return false
+        }
+        return current != stock
+    }
+
+    private var currentArtworkProductDescription: String? {
+        guard let artwork = plist?.cacheExtra[Self.artworkKey] as? [String: Any] else {
+            return nil
+        }
+        return artwork["ArtworkDeviceProductDescription"] as? String
+    }
+
     var hasStagedTweaks: Bool {
         !selectedTweaks.isEmpty
             || !removedTweaks.isEmpty
             || unstageAIRegion
             || dynamicIslandSubtype != nil
-            || (changesModelName && !modelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            || stagesModelName
+            || unstagesModelName
             || stagesAIRegion
+            || restoreDeviceIdentity
     }
 
     var stagedChangeCount: Int {
@@ -76,8 +104,10 @@ final class GestaltViewModel: ObservableObject {
             + removedTweaks.count
             + (unstageAIRegion ? 1 : 0)
             + (dynamicIslandSubtype == nil ? 0 : 1)
-            + (changesModelName ? 1 : 0)
+            + (stagesModelName ? 1 : 0)
+            + (unstagesModelName ? 1 : 0)
             + (stagesAIRegion ? 1 : 0)
+            + (restoreDeviceIdentity ? 1 : 0)
     }
 
     func load() {
@@ -94,6 +124,7 @@ final class GestaltViewModel: ObservableObject {
             }
             plist = GestaltPlist(dict: dictionary)
             captureBaseline(from: dictionary)
+            modelName = currentArtworkProductDescription ?? ""
             isDirty = false
             refreshBackups()
             Task.detached(priority: .utility) {
@@ -225,6 +256,19 @@ final class GestaltViewModel: ObservableObject {
         }
     }
 
+    func setModelNameToggled(_ on: Bool) {
+        if on {
+            stagesModelName = true
+            unstagesModelName = false
+            if modelName.isEmpty, let current = currentArtworkProductDescription {
+                modelName = current
+            }
+        } else {
+            stagesModelName = false
+            unstagesModelName = isCustomModelNameApplied
+        }
+    }
+
     func applySelectedTweaks() {
         guard !isBusy, var pending = plist else { return }
         do {
@@ -242,11 +286,13 @@ final class GestaltViewModel: ObservableObject {
                 addedKeys.formUnion([Self.artworkKey, Self.dynamicIslandSupportKey])
             }
 
-            if changesModelName {
+            if stagesModelName {
                 let name = modelName.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !name.isEmpty else { throw GestaltEditError.emptyModelName }
                 try pending.setModelName(name)
                 addedKeys.insert(Self.artworkKey)
+            } else if unstagesModelName {
+                restoreArtworkProductDescription(in: &pending)
             }
 
             for id in removedTweaks {
@@ -257,6 +303,10 @@ final class GestaltViewModel: ObservableObject {
                 if id == .iPadOS, let pristine = pristineCacheData {
                     pending.dict["CacheData"] = pristine
                 }
+            }
+
+            if restoreDeviceIdentity {
+                try pending.restoreDeviceIdentity(from: pristineCacheExtra)
             }
 
             var expectedConfiguration: AIRegionConfiguration?
@@ -283,10 +333,11 @@ final class GestaltViewModel: ObservableObject {
                 self?.selectedTweaks.removeAll()
                 self?.removedTweaks.removeAll()
                 self?.dynamicIslandSubtype = nil
-                self?.changesModelName = false
-                self?.modelName = ""
+                self?.stagesModelName = false
+                self?.unstagesModelName = false
                 self?.stagesAIRegion = false
                 self?.unstageAIRegion = false
+                self?.restoreDeviceIdentity = false
             }
         } catch {
             report(error)
@@ -391,10 +442,13 @@ final class GestaltViewModel: ObservableObject {
         isBusy = true
         notice = nil
 
+        var wrote = false
         do {
             let originalData = try access.readGestaltData()
             _ = try GestaltBackupStore.create(from: originalData)
             try access.saveGestalt(pendingPlist.dict)
+            wrote = true
+
             guard let verification = try access.readGestalt() as? [String: Any] else {
                 throw GestaltEditError.invalidPlist
             }
@@ -419,15 +473,19 @@ final class GestaltViewModel: ObservableObject {
 
             plist = verifiedPlist
             isDirty = false
-            completion?()
-            refreshBackups()
-            isBusy = false
-            isRespringing = true
         } catch {
             isDirty = true
             report(error)
-            isBusy = false
         }
+
+        if wrote {
+            // The write went through, so stop reporting these as pending even
+            // if the post-write readback/verification failed.
+            completion?()
+            refreshBackups()
+            isRespringing = true
+        }
+        isBusy = false
     }
 
     private func report(_ error: Error) {
@@ -475,6 +533,21 @@ final class GestaltViewModel: ObservableObject {
     private func restoreRegionKeys(in pending: inout GestaltPlist) {
         for key in Self.aiRegionKeys {
             restoreCacheExtraValue(forKey: key, in: &pending)
+        }
+    }
+
+    /// Puts the artwork's product description back to the stock baseline name.
+    private func restoreArtworkProductDescription(in pending: inout GestaltPlist) {
+        guard var artwork = pending.cacheExtra[Self.artworkKey] as? [String: Any] else {
+            return
+        }
+        let stockName = (pristineCacheExtra?[Self.artworkKey] as? [String: Any])?["ArtworkDeviceProductDescription"] as? String
+        if let stockName {
+            artwork["ArtworkDeviceProductDescription"] = stockName
+            pending.setCacheExtra(artwork, forKey: Self.artworkKey)
+        } else {
+            artwork.removeValue(forKey: "ArtworkDeviceProductDescription")
+            pending.setCacheExtra(artwork, forKey: Self.artworkKey)
         }
     }
 }

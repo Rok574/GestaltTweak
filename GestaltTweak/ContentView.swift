@@ -18,76 +18,78 @@ struct ContentView: View {
         Group {
             if GestaltAccess.isRunningSupportedOS() {
                 NavigationStack {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 22) {
-                            hero
+                    List {
+                        Section {
+                            deviceRow
+                        }
 
-                            deviceCard
-
-                            sectionTitle("Modules")
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible(), spacing: 14),
-                                    GridItem(.flexible()),
-                                ],
-                                spacing: 14
-                            ) {
-                                featureCard(
+                        Section("Modules") {
+                            NavigationLink {
+                                TweakWorkbench()
+                            } label: {
+                                moduleRow(
                                     icon: "paintbrush",
                                     tint: .pink,
                                     title: "MobileGestalt",
                                     subtitle: "Flip flags, pick a subtype, rename"
-                                ) {
-                                    TweakWorkbench()
-                                }
-                                featureCard(
+                                )
+                            }
+                            NavigationLink {
+                                AdvancedGestaltEditor()
+                            } label: {
+                                moduleRow(
                                     icon: "square.and.pencil",
                                     tint: .blue,
                                     title: "Advanced Fields",
                                     subtitle: "Hand-edit any raw key"
-                                ) {
-                                    AdvancedGestaltEditor()
-                                }
-                                featureCard(
+                                )
+                            }
+                            NavigationLink {
+                                BackupLibrary()
+                            } label: {
+                                moduleRow(
                                     icon: "archivebox",
                                     tint: .orange,
                                     title: "Backups",
                                     subtitle: "Snapshots you can roll back"
-                                ) {
-                                    BackupLibrary()
-                                }
-                                featureCard(
+                                )
+                            }
+                            NavigationLink {
+                                PosterView()
+                            } label: {
+                                moduleRow(
                                     icon: "photo.on.rectangle.angled",
                                     tint: .purple,
                                     title: "PosterBoard",
                                     subtitle: "Drop in wallpaper packs"
-                                ) {
-                                    PosterView()
-                                }
-                            }
-
-                            sectionTitle("Actions")
-                            HStack(spacing: 14) {
-                                quickAction(
-                                    icon: "bolt.fill",
-                                    tint: .green,
-                                    title: "Run Exploit"
-                                ) {
-                                    viewModel.runExploit()
-                                }
-                                quickAction(
-                                    icon: "arrow.counterclockwise",
-                                    tint: .red,
-                                    title: "Respring"
-                                ) {
-                                    viewModel.respring()
-                                }
+                                )
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+
+                        Section("Actions") {
+                            Button {
+                                viewModel.runExploit()
+                            } label: {
+                                moduleRow(
+                                    icon: "bolt.fill",
+                                    tint: .green,
+                                    title: "Run Exploit",
+                                    subtitle: "Make MobileGestalt writable"
+                                )
+                            }
+                            Button {
+                                viewModel.respring()
+                            } label: {
+                                moduleRow(
+                                    icon: "arrow.counterclockwise",
+                                    tint: .red,
+                                    title: "Respring",
+                                    subtitle: "Reboot the SpringBoard"
+                                )
+                            }
+                        }
                     }
-                    .background(Color(.systemGroupedBackground), ignoresSafeAreaEdges: .all)
+                    .navigationTitle("GestaltTweak")
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
@@ -120,43 +122,20 @@ struct ContentView: View {
         }
     }
 
-    private var hero: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-                    .frame(width: 58, height: 58)
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("GestaltTweak")
-                    .font(.title2.weight(.bold))
-                Text("Tame your system file")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-        }
-    }
-
-    private var deviceCard: some View {
+    private var deviceRow: some View {
         HStack(spacing: 12) {
             Image(systemName: "iphone")
                 .font(.title2)
                 .foregroundStyle(Color.accentColor)
-                .frame(width: 40, height: 40)
+                .frame(width: 38, height: 38)
                 .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(Color(.secondarySystemBackground))
                 )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(viewModel.aiRegionProfile?.marketingName ?? "Current Device")
-                    .font(.headline)
+                    .font(.body.weight(.semibold))
                 Text("Build \(GestaltAccess.currentOSBuild())")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -164,115 +143,62 @@ struct ContentView: View {
 
             Spacer()
 
-            if viewModel.plist == nil {
-                if viewModel.isBusy || !viewModel.hasAttemptedLoad {
+            deviceStatus
+        }
+    }
+
+    @ViewBuilder
+    private var deviceStatus: some View {
+        if viewModel.plist == nil {
+            if viewModel.isBusy || !viewModel.hasAttemptedLoad {
+                HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
                     Text("Reading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Unavailable")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.orange)
-                        Button("Retry", action: viewModel.load)
-                            .font(.caption)
-                    }
                 }
             } else {
-                Label("Connected", systemImage: "checkmark.circle.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.green)
-            }
-        }
-        .padding(14)
-        .background(
-            .regularMaterial,
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-        )
-    }
-
-    private func sectionTitle(_ title: String) -> some View {
-        Text(title)
-            .font(.footnote.weight(.semibold))
-            .textCase(.uppercase)
-            .kerning(0.8)
-            .foregroundStyle(.secondary)
-    }
-
-    private func featureCard(
-        icon: String,
-        tint: Color,
-        title: String,
-        subtitle: String,
-        @ViewBuilder destination: () -> some View
-    ) -> some View {
-        NavigationLink {
-            destination()
-        } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(tint)
-                    )
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-
-                    Text(subtitle)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Unavailable")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    Button("Retry", action: viewModel.load)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
-            .padding(14)
-            .background(
-                .regularMaterial,
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
+        } else {
+            Label("Connected", systemImage: "checkmark.circle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.green)
         }
-        .buttonStyle(.plain)
     }
 
-    private func quickAction(
+    private func moduleRow(
         icon: String,
         tint: Color,
         title: String,
-        action: @escaping () -> Void
+        subtitle: String
     ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 30, height: 30)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(tint)
-                    )
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(tint)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Spacer(minLength: 0)
+                    .font(.body)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(
-                .regularMaterial,
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -297,11 +223,79 @@ private struct TweakWorkbench: View {
     @State private var query = ""
 
     var body: some View {
-        Group {
+        List {
             if viewModel.plist != nil {
-                workbenchContent
+                Section {
+                    Picker("Dynamic Island Subtype", selection: Binding<Int?>(
+                        get: { viewModel.dynamicIslandSubtype },
+                        set: { newValue in
+                            viewModel.dynamicIslandSubtype = newValue
+                            viewModel.restoreDeviceIdentity = false
+                        }
+                    )) {
+                        Text("No Change").tag(Int?.none)
+                        ForEach(DynamicIslandOption.all) { option in
+                            Text("\(option.subtype) · \(option.title)").tag(Int?.some(option.subtype))
+                        }
+                    }
+                    Toggle("Custom Model Name", isOn: Binding(
+                        get: { viewModel.modelNameToggleState },
+                        set: { on in
+                            viewModel.setModelNameToggled(on)
+                            if on { viewModel.restoreDeviceIdentity = false }
+                        }
+                    ))
+                    if viewModel.modelNameToggleState {
+                        TextField("Model Name", text: $viewModel.modelName)
+                            .textInputAutocapitalization(.words)
+                    }
+                    Toggle("Restore Original Identity", isOn: Binding(
+                        get: { viewModel.restoreDeviceIdentity },
+                        set: { on in
+                            viewModel.restoreDeviceIdentity = on
+                            if on {
+                                viewModel.dynamicIslandSubtype = nil
+                                viewModel.setModelNameToggled(false)
+                                viewModel.stagesModelName = false
+                                viewModel.unstagesModelName = false
+                            }
+                        }
+                    ))
+                } header: {
+                    Text("Device Identity")
+                } footer: {
+                    Text("Restore Original writes the stock subtype, model name, and Dynamic Island flag back. The subtype picker writes ArtworkDeviceSubType and the Dynamic Island support flag.")
+                }
+
+                ForEach(GestaltTweakCategory.allCases) { category in
+                    tweakSection(category)
+                }
+
+                if !hasAnyResults {
+                    Section {
+                        Text("No results for \"\(query)\"")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } else {
-                loadState
+                Section {
+                    if viewModel.isBusy || !viewModel.hasAttemptedLoad {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Reading MobileGestalt…")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        HStack {
+                            Text("Unable to load MobileGestalt")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("Retry") { viewModel.load() }
+                                .font(.caption)
+                        }
+                    }
+                }
             }
         }
         .navigationTitle("MobileGestalt")
@@ -309,211 +303,66 @@ private struct TweakWorkbench: View {
         .searchable(text: $query, prompt: "Filter tweaks")
         .refreshable { viewModel.load() }
         .safeAreaInset(edge: .bottom) {
-            if viewModel.plist != nil {
+            if viewModel.hasStagedTweaks {
                 applyBar
             }
         }
     }
 
-    private var workbenchContent: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
-                summaryCard
-
-                deviceIdentityCard
-
-                if !hasAnyResults {
-                    ContentUnavailableView.search
-                } else {
-                    ForEach(GestaltTweakCategory.allCases) { category in
-                        categoryCard(category)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-        }
-        .background(Color(.systemGroupedBackground))
-    }
-
-    private var loadState: some View {
-        VStack(spacing: 12) {
-            if viewModel.isBusy || !viewModel.hasAttemptedLoad {
-                ProgressView()
-                    .controlSize(.large)
-                Text("Reading MobileGestalt…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-                Text("Unable to load MobileGestalt")
-                    .font(.headline)
-                Button("Retry", action: viewModel.load)
-                    .buttonStyle(.borderedProminent)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: Summary
-
-    private var summaryCard: some View {
-        HStack(spacing: 16) {
-            statBox(value: viewModel.activeTweaks.count, label: "Active", tint: .green)
-            statBox(value: viewModel.stagedChangeCount, label: "Staged", tint: .orange)
-            statBox(value: GestaltTweakCatalog.definitions.count, label: "Total", tint: .secondary)
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "lock.doc")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.regularMaterial)
-        )
-    }
-
-    private func statBox(value: Int, label: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(value)")
-                .font(.title3.weight(.bold))
-                .monospacedDigit()
-                .foregroundStyle(tint)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: Device identity
-
-    private var deviceIdentityCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            cardHeader(icon: "iphone.gen3", title: "Device Identity", tint: .indigo)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Dynamic Island Subtype")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        subtypeChip(nil, title: "No Change")
-                        ForEach(DynamicIslandOption.all) { option in
-                            subtypeChip(option.subtype, title: "\(option.subtype) · \(option.title)")
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Toggle(isOn: $viewModel.changesModelName) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Custom Model Name")
-                        .font(.subheadline.weight(.medium))
-                    Text("Shown in Settings > General > About")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .tint(.accentColor)
-
-            if viewModel.changesModelName {
-                TextField("Model Name", text: $viewModel.modelName)
-                    .textFieldStyle(.roundedBorder)
-                    .textInputAutocapitalization(.words)
-            }
-        }
-        .padding(14)
-        .background(cardBackground)
-    }
-
-    private func subtypeChip(_ value: Int?, title: String) -> some View {
-        let selected = viewModel.dynamicIslandSubtype == value
-        return Button {
-            viewModel.dynamicIslandSubtype = value
-        } label: {
-            Text(title)
-                .font(.footnote.weight(selected ? .semibold : .regular))
-                .foregroundStyle(selected ? .white : .primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(selected ? Color.accentColor : Color(.tertiarySystemFill))
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: Categories
-
     @ViewBuilder
-    private func categoryCard(_ category: GestaltTweakCategory) -> some View {
+    private func tweakSection(_ category: GestaltTweakCategory) -> some View {
         let definitions = GestaltTweakCatalog.definitions.filter { $0.category == category }
         let visible = filtered(definitions)
         let showAI = category == .region && aiRegionMatchesQuery
-        let staged = visible.filter {
-            viewModel.selectedTweaks.contains($0.id) || viewModel.removedTweaks.contains($0.id)
-        }.count
 
         if !visible.isEmpty || showAI {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: categoryIcon(category))
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(categoryTint(category))
-                    Text(category.label)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    if staged > 0 {
-                        Text("\(staged) staged")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.orange))
-                    }
+            Section(category.label) {
+                if showAI {
+                    aiRegionToggle
                 }
-                .padding(.horizontal, 2)
-
-                VStack(spacing: 10) {
-                    if showAI {
-                        aiRegionRow
+                ForEach(visible) { definition in
+                    Toggle(isOn: Binding(
+                        get: { viewModel.isTweakEnabled(definition.id) },
+                        set: { viewModel.setTweak(definition.id, enabled: $0) }
+                    )) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 6) {
+                                Text(definition.title)
+                                if definition.isLocked {
+                                    Image(systemName: "lock.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else if definition.isRisky {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            Text(definition.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .opacity(definition.isLocked ? 0.5 : 1)
                     }
-                    ForEach(visible) { definition in
-                        TweakCard(
-                            definition: definition,
-                            isOn: Binding(
-                                get: { viewModel.isTweakEnabled(definition.id) },
-                                set: { viewModel.setTweak(definition.id, enabled: $0) }
-                            )
-                        )
-                    }
+                    .disabled(definition.isLocked)
                 }
             }
-            .padding(12)
-            .background(cardBackground)
         }
     }
 
-    private var aiRegionRow: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+    private var aiRegionToggle: some View {
+        Toggle(isOn: Binding(
+            get: { viewModel.aiRegionToggleState },
+            set: { viewModel.setAIRegion(enabled: $0) }
+        )) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text("Apple Intelligence")
-                        .font(.body.weight(.semibold))
                     if viewModel.requiresForcedAIEnable {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
-                            .accessibilityLabel("High Risk")
                     }
                 }
                 if viewModel.requiresForcedAIEnable {
@@ -521,23 +370,9 @@ private struct TweakWorkbench: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    Text("Spoofs the region and regulatory model to enable Apple Intelligence.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Spacer(minLength: 8)
-            Toggle("", isOn: Binding(
-                get: { viewModel.aiRegionToggleState },
-                set: { viewModel.setAIRegion(enabled: $0) }
-            ))
-            .labelsHidden()
-            .tint(.accentColor)
         }
-        .padding(12)
-        .background(rowBackground)
     }
 
     private func filtered(_ definitions: [GestaltTweakDefinition]) -> [GestaltTweakDefinition] {
@@ -566,136 +401,23 @@ private struct TweakWorkbench: View {
         }
     }
 
-    private func categoryIcon(_ category: GestaltTweakCategory) -> String {
-        switch category {
-        case .region: "globe.americas"
-        case .display: "rectangle.3.group"
-        case .hardware: "cpu"
-        case .ipad: "ipad"
-        case .internalFeatures: "flask"
-        }
-    }
-
-    private func categoryTint(_ category: GestaltTweakCategory) -> Color {
-        switch category {
-        case .region: .blue
-        case .display: .teal
-        case .hardware: .orange
-        case .ipad: .mint
-        case .internalFeatures: .pink
-        }
-    }
-
-    private func cardHeader(icon: String, title: String, tint: Color) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(tint)
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-            Spacer()
-        }
-        .padding(.horizontal, 2)
-    }
-
-    private var cardBackground: some ShapeStyle {
-        AnyShapeStyle(.regularMaterial)
-    }
-
-    private var rowBackground: some ShapeStyle {
-        AnyShapeStyle(Color(.secondarySystemBackground))
-    }
-
-    // MARK: Apply bar
-
     private var applyBar: some View {
-        HStack(spacing: 12) {
+        HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(pendingText)
+                Text(String(format: "%d pending change%@", viewModel.stagedChangeCount, viewModel.stagedChangeCount == 1 ? "" : "s"))
                     .font(.subheadline.weight(.semibold))
                 Text("A backup is saved before every write")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button {
-                viewModel.applySelectedTweaks()
-            } label: {
-                Label("Apply", systemImage: "checkmark")
-            }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-            .disabled(!viewModel.hasStagedTweaks || viewModel.isBusy)
+            Button("Apply") { viewModel.applySelectedTweaks() }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isBusy)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(.bar)
-    }
-
-    private var pendingText: String {
-        let count = viewModel.stagedChangeCount
-        if count == 0 { return "No pending changes" }
-        return "\(count) pending change\(count == 1 ? "" : "s")"
-    }
-}
-
-private struct TweakCard: View {
-    @EnvironmentObject private var viewModel: GestaltViewModel
-    let definition: GestaltTweakDefinition
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(definition.title)
-                        .font(.body.weight(.semibold))
-                    if let status {
-                        Text(status.0)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(status.1))
-                    }
-                }
-                Text(definition.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 8)
-            if definition.isLocked {
-                Image(systemName: "lock.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("Locked")
-            } else if definition.isRisky, status == nil {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .accessibilityLabel("High Risk")
-            }
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-                .disabled(definition.isLocked)
-                .tint(.accentColor)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-        .opacity(definition.isLocked ? 0.55 : 1)
-    }
-
-    private var status: (String, Color)? {
-        if definition.isLocked { return ("Locked", .gray) }
-        if viewModel.selectedTweaks.contains(definition.id) { return ("Pending", .orange) }
-        if viewModel.removedTweaks.contains(definition.id) { return ("Pending", .orange) }
-        if viewModel.isTweakEnabled(definition.id) { return ("Active", .green) }
-        return nil
     }
 }
 

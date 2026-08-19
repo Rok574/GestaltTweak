@@ -99,7 +99,7 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color(.secondarySystemBackground))
                     .frame(width: 50, height: 50)
-                Image(systemName: "slider.horizontal.3")
+                Image(systemName: "bolt.fill")
                     .font(.system(size: 21, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
             }

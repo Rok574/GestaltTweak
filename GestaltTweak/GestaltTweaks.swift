@@ -230,6 +230,23 @@ extension GestaltPlist {
         setCacheExtra(artwork, forKey: key)
     }
 
+    /// Writes the stock artwork dictionary and Dynamic Island support flag back
+    /// from the original baseline, undoing any subtype / model name change.
+    mutating func restoreDeviceIdentity(from baselineCacheExtra: [String: Any]?) {
+        let artworkKey = "oPeik/9e8lQWMszEjbPzng"
+        let diKey = "YlEtTtHlNesRBMal1CqRaA"
+        if let pristineArtwork = baselineCacheExtra?[artworkKey] as? [String: Any] {
+            setCacheExtra(pristineArtwork, forKey: artworkKey)
+        } else {
+            removeCacheExtraValue(forKey: artworkKey)
+        }
+        if let pristineDI = baselineCacheExtra?[diKey] {
+            setCacheExtra(pristineDI, forKey: diKey)
+        } else {
+            removeCacheExtraValue(forKey: diKey)
+        }
+    }
+
     private mutating func enableIPadOSCacheData() throws {
         guard let cacheData = dict["CacheData"] as? Data else {
             throw GestaltTweakError.cacheDataMissing
