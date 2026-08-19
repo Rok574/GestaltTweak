@@ -20,7 +20,7 @@ struct PosterView: View {
     @State private var busy = false
     @State private var alert: PosterAlert?
 
-    var body: some View {
+ var body: some View {
         List {
             Section {
                 Button {
@@ -31,12 +31,13 @@ struct PosterView: View {
                             ProgressView()
                             Text("Applying")
                         }
+                        .foregroundStyle(.purple)
                     } else {
                         Label("Apply", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.purple)
                     }
                 }
                 .disabled(viewModel.posterFiles.isEmpty || busy)
-                .tint(.purple)
 
                 Button {
                     reset()
