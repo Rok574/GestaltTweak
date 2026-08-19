@@ -481,7 +481,7 @@ final class GestaltViewModel: ObservableObject {
 
         var wrote = false
         do {
-            if UserDefaults.standard.object(forKey: "backup_before_write") != false,
+                if (UserDefaults.standard.object(forKey: "backup_before_write") as? Bool ?? true),
                let originalData = try? access.readGestaltData() {
                 do {
                     _ = try GestaltBackupStore.create(from: originalData)
