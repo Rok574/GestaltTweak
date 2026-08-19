@@ -1,14 +1,7 @@
-<table>
-  <tr>
-    <td align="center" valign="middle">
-      <img src="https://images.weserv.nl/?url=https://raw.githubusercontent.com/Rok574/GestaltTweak/main/GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png&w=256&h=256&mask=ellipse" width="64" height="64" alt="GestaltTweak Icon">
-    </td>
-    <td valign="middle">
-      <h1 style="border-bottom: none; margin: 0; padding: 0;">GestaltTweak</h1>
-    </td>
-  </tr>
-</table>
-
+<h1>
+  <img src="https://images.weserv.nl/?url=https://raw.githubusercontent.com/Rok574/GestaltTweak/main/GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png&w=256&h=256&mask=ellipse" width="40" height="40" valign="bottom" alt="GestaltTweak Icon">
+  GestaltTweak
+</h1>
 <p align="center">
   <strong>Modify MobileGestalt On IOS 27 Dev Beta 1-4 !</strong>
 </p>
