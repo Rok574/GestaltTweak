@@ -255,9 +255,7 @@ private struct TweakWorkbench: View {
                             viewModel.restoreDeviceIdentity = on
                             if on {
                                 viewModel.dynamicIslandSubtype = nil
-                                viewModel.setModelNameToggled(false)
-                                viewModel.stagesModelName = false
-                                viewModel.unstagesModelName = false
+                                viewModel.clearModelNameStaging()
                             }
                         }
                     ))

@@ -269,6 +269,11 @@ final class GestaltViewModel: ObservableObject {
         }
     }
 
+    func clearModelNameStaging() {
+        stagesModelName = false
+        unstagesModelName = false
+    }
+
     func applySelectedTweaks() {
         guard !isBusy, var pending = plist else { return }
         do {
@@ -306,7 +311,7 @@ final class GestaltViewModel: ObservableObject {
             }
 
             if restoreDeviceIdentity {
-                try pending.restoreDeviceIdentity(from: pristineCacheExtra)
+                pending.restoreDeviceIdentity(from: pristineCacheExtra)
             }
 
             var expectedConfiguration: AIRegionConfiguration?
