@@ -29,6 +29,40 @@ enum GestaltBackupStore {
         return try metadata(for: url)
     }
 
+    /// The untouched MobileGestalt plist captured the first time it was read.
+    /// Unapplying a tweak restores keys to this snapshot, which lets tweaks be
+    /// reverted even after the app was relaunched by a respring.
+    static func loadStockSnapshot() -> [String: Any]? {
+        guard let data = try? Data(contentsOf: stockSnapshotURL),
+              let plist = try? PropertyListSerialization.propertyList(
+                from: data,
+                options: [],
+                format: nil
+              ) as? [String: Any] else {
+            return nil
+        }
+        return plist
+    }
+
+    static func saveStockSnapshot(_ plist: [String: Any]) {
+        guard let data = try? PropertyListSerialization.data(
+            fromPropertyList: plist,
+            format: .binary,
+            options: 0
+        ) else { return }
+        try? data.write(to: stockSnapshotURL, options: .atomic)
+    }
+
+    private static var stockSnapshotURL: URL {
+        let documents = (try? FileManager.default.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )) ?? FileManager.default.temporaryDirectory
+        return documents.appendingPathComponent("StockSnapshot.plist")
+    }
+
     static func list() throws -> [GestaltBackup] {
         let directory = try backupDirectory()
         return try FileManager.default.contentsOfDirectory(

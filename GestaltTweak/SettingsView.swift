@@ -97,17 +97,11 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.indigo, .purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color(.secondarySystemBackground))
                     .frame(width: 50, height: 50)
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
             }
 
             VStack(alignment: .leading, spacing: 2) {
