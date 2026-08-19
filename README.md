@@ -1,16 +1,16 @@
 # GestaltTweak
 
 <p align="center">
-  <img src="GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" height="128" style="border-radius: 22%;" alt="GestaltTweak Icon">
+  <img src="https://images.weserv.nl/?url=https://raw.githubusercontent.com/Rok574/GestaltTweak/main/GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png&w=256&h=256&mask=ellipse" width="128" height="128" alt="GestaltTweak Icon">
 </p>
 
 <p align="center">
-  <strong>Modify MobileGestalt capabilities directly on iOS—no PC or Mac required.</strong>
+  <strong>Modify MobileGestalt On IOS 27 Dev Beta 1-4 !</strong>
 </p>
 
 ---
 
-GestaltTweak is a native SwiftUI app for iOS that edits `com.apple.MobileGestalt.plist` directly on-device. By utilizing local sandbox escape methods (`bad_query` with a `cmg` fallback), you can toggle system features, customize device subtypes, and manage configuration backups without needing to tether to a computer.
+GestaltTweak is a native SwiftUI app for iOS that edits `com.apple.MobileGestalt.plist` directly on-device. By utilizing local sandbox escape methods (`bad_query` with a `cmg` fallback), you can toggle system features, customize device subtypes, and manage configuration backups without needing to be on computer.
 
 ## Features
 
