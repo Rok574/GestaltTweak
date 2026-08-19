@@ -40,8 +40,6 @@ Version".
   the iOS version, reinstall, or ask the community (see credits).
 - **Tweaks disappear after reboot** - expected; the cache is rebuilt at boot.
   This is normal for these tools.
-- **Bundle id clash on install** - change `PRODUCT_BUNDLE_IDENTIFIER` in
-  `GestaltTweak.xcodeproj/project.pbxproj` to something else and rebuild.
 
 ## Credits
 
