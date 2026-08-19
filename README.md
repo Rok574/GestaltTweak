@@ -1,9 +1,10 @@
-<h1>
-  <img src="https://images.weserv.nl/?url=https://raw.githubusercontent.com/Rok574/GestaltTweak/main/GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png&w=256&h=256&mask=ellipse" width="40" height="40" valign="bottom" alt="GestaltTweak Icon">
+<h1 align="center">
+  <img src="https://images.weserv.nl/?url=https://raw.githubusercontent.com/Rok574/GestaltTweak/main/GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png&w=256&h=256&mask=ellipse" width="40" height="40" align="absmiddle" alt="GestaltTweak Icon">
   GestaltTweak
 </h1>
+
 <p align="center">
-  <strong>Modify MobileGestalt On IOS 27 Dev Beta 1-4 !</strong>
+  <strong>Modify MobileGestalt On iOS 27 Dev Beta 1-4!</strong>
 </p>
 
 ---
