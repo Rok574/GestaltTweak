@@ -1,57 +1,66 @@
-# GestaltTweak
+<h1 align="center">
+  <img src="https://images.weserv.nl/?url=https://raw.githubusercontent.com/Rok574/GestaltTweak/main/GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png&w=256&h=256&mask=ellipse" width="40" height="40" align="absmiddle" alt="GestaltTweak Icon">
+  GestaltTweak
+</h1>
 
 <p align="center">
-  <img src="GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="GestaltTweak icon">
+  <strong>Modify MobileGestalt On iOS 27 Dev Beta 1-4!</strong>
 </p>
 
-A native SwiftUI iPhone app that uses the **bad_query** sandbox escape
-([forcequitOS/bad_query](https://github.com/forcequitOS/bad_query)) - or the
-**cmg** container-manager method as a fallback - to edit
-`com.apple.MobileGestalt.plist` **on your own device** - no Mac, no tethering.
+---
 
-It reads your live MobileGestalt file, lets you toggle capability tweaks
-(Dynamic Island, Always-On Display, boot chime, charge limit, etc.), change
-the device subtype / model name, edit any raw field, back up / restore, and
-import PosterBoard wallpaper packs (tendies).
+GestaltTweak is a native SwiftUI app for iOS that edits `com.apple.MobileGestalt.plist` directly on-device. By utilizing local sandbox escape methods (`bad_query` with a `cmg` fallback), you can toggle system features, customize device subtypes, and manage configuration backups without needing to be on computer.
 
-UI is a custom card-based home screen: a gradient hero header, a device status
-card, and a grid of feature cards leading into the tweak lists, an Advanced
-field editor, a Backups & Restore screen, a PosterBoard screen, and a Settings
-sheet with the exploit method picker, **Persist after reboot** toggle,
-respring tool, and credits.
+## Features
 
-> **WARNING - use at your own risk.**
-> This uses private APIs and modifies a system cache file. Incorrect values can
-> break system features, soft-brick the UI, or bootloop the device. Only use it
-> on a device you own. A backup is always created before a write, and the
-> Backups & Restore screen can bring the original file back.
+- **Capability Toggles:** Quickly enable features like Dynamic Island, Always-On Display, boot chimes, and charge limits.
+- **Device Identity:** Change your device subtype and model name on the fly.
+- **Advanced Field Editor:** Search and modify raw MobileGestalt keys manually.
+- **Backup & Restore:** Automatic backups before any changes, plus full restore management.
+- **PosterBoard Support:** Import and apply custom wallpaper packs ("tendies").
+- **Customization & Persistence:** Integrated respring tool, exploit method selection, and persistent toggle management.
 
-## Supported versions
+---
 
-Only **iOS / iPadOS 27 developer beta 1 - 4** (builds `24A5355q`, `24A5370h`,
-`24A5380h`, `24A5380i`, `24A5380l`, `24A5390f`). This is a hard limit of the
-`bad_query` exploit - on any other version the app just shows "Unsupported OS
-Version".
+> ⚠️ **Disclaimer & Warning**  
+> GestaltTweak uses private APIs and modifies system cache files. Modifying incorrect keys can cause feature instability, UI glitches, or bootloops. Use this tool responsibly and at your own risk. Always ensure you have a backup saved.
 
-## Troublesooting
+---
 
-- **"Unsupported OS Version"** - your build isn't in the supported list above.
-- **"Unable to read MobileGestalt"** - the sandbox escape didn't fire. Check
-  the iOS version, reinstall, or ask the community (see credits).
-- **Tweaks disappear after reboot** - expected; the cache is rebuilt at boot.
-  This is normal for these tools.
-- **Bundle id clash on install** - change `PRODUCT_BUNDLE_IDENTIFIER` in
-  `GestaltTweak.xcodeproj/project.pbxproj` to something else and rebuild.
+## Compatibility
 
-## Credits
+This app relies on specific kernel/sandbox vulnerabilities and supports **iOS / iPadOS 27 Developer Betas 1 through 4** only.
 
-- [forcequitOS/bad_query](https://github.com/forcequitOS/bad_query) - the sandbox escape
-- [frs0n/GestaltEdit](https://github.com/frs0n/GestaltEdit) - architecture, MIT
-- [rooootdev/mond](https://github.com/rooootdev/mond) - tweak approaches and PosterBoard (tendies) feature
-- [leminlimez/Nugget](https://github.com/leminlimez/Nugget) - MobileGestalt keys & iPadOS `CacheData` patch
-- [rooootdev/neospring](https://github.com/rooootdev/neospring) - respring (neonmodder123 / skadz108)
-- [SerStars/Nugget-Wallpapers](https://github.com/SerStars/Nugget-Wallpapers) - tendies wallpaper catalog
+* **Supported Builds:** `24A5355q`, `24A5370h`, `24A5380h`, `24A5380i`, `24A5380l`, `24A5390f`
+
+*Note: Running GestaltTweak on unsupported iOS versions will result in an "Unsupported OS Version" warning, and exploit execution will be blocked.*
+
+---
+
+## Troubleshooting
+
+- **"Unsupported OS Version"**  
+  Your device is running an iOS build outside the supported beta range listed above.
+- **"Unable to Read MobileGestalt"**  
+  The sandbox escape failed to initialize. Try restarting your device, reinstalling the application, or verifying your build version.
+- **Tweaks Revert After a Reboot**  
+  This is expected behavior. The MobileGestalt cache is rebuilt by iOS upon reboot. Re-apply your tweaks or enable the persist option in app settings.
+
+---
+
+## Credits & Acknowledgments
+
+GestaltTweak is made possible thanks to the work of the following developers and projects:
+
+- [forcequitOS/bad_query](https://github.com/forcequitOS/bad_query) – Primary sandbox escape method
+- [frs0n/GestaltEdit](https://github.com/frs0n/GestaltEdit) – Project architecture inspiration (MIT)
+- [rooootdev/mond](https://github.com/rooootdev/mond) – Implementations for PosterBoard feature
+- [leminlimez/Nugget](https://github.com/leminlimez/Nugget) – MobileGestalt key mappings and iPadOS `CacheData` patch
+- [rooootdev/neospring](https://github.com/rooootdev/neospring) – Respring implementation (neonmodder123 / skadz108)
+- [SerStars/Nugget-Wallpapers](https://github.com/SerStars/Nugget-Wallpapers) – PosterBoard wallpaper catalog
+
+---
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
