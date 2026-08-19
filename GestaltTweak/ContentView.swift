@@ -499,7 +499,7 @@ private struct BackupLibrary: View {
                     }
                 }
             }
-            .navigationTitle("Restore")
+            .navigationTitle("Backups")
             .refreshable { viewModel.refreshBackups() }
             .onAppear { viewModel.refreshBackups() }
             .fileImporter(

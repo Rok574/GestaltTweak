@@ -61,6 +61,18 @@ enum GestaltTweakID: String, CaseIterable, Identifiable {
     case alwaysOnCompass
     case secureMicrophone
     case audioMix
+    case thunderbolt
+    case usbCDisplayOutput
+    case wirelessSplitting
+    case independentSpeakerOutput
+    case ultraLowPowerNetworking
+    case aodFlipbook
+    case heartRateVariability
+    case spatialFaceTimeAudio
+    case hypertensivePatternMeasurements
+    case frameSynchronousBrightness
+    case p3VideoRecording
+    case autoLowLightVideo
 
     var id: String { rawValue }
 }
@@ -78,10 +90,11 @@ struct GestaltTweakDefinition: Identifiable {
         for (key, expected) in values {
             guard let stored = cacheExtra[key],
                   Self.valueEquals(stored, expected) else {
-                return false
+                continue
             }
+            return true
         }
-        return true
+        return false
     }
 
     private static func valueEquals(_ lhs: Any, _ rhs: Any) -> Bool {
@@ -114,6 +127,8 @@ enum GestaltTweakCatalog {
         .init(id: .twilight, category: .display, title: "Twilight", detail: "Enables the Twilight screen mode capability. iOS 17.4 and later.", values: ["1Bk5Dr0hTb0bYXl04068MQ": 1]),
         .init(id: .grayDimming, category: .display, title: "Gray Dimming", detail: "Enables gray-scale screen dimming. iOS 26 and later.", values: ["1cPL2NOPt23mHxhn0J4xPA": 1]),
         .init(id: .contextualVolume, category: .display, title: "Contextual Volume", detail: "Enables the contextual volume UI. iOS 26 and later.", values: ["7AqG7ADB9UZgLLYKd9ZhrQ": 1]),
+        .init(id: .aodFlipbook, category: .display, title: "Always-On Display Flipbook", detail: "Enables AOD flipbook widgets on the Lock Screen. iOS 18 and later.", values: ["aoJSd/MXk7M40NgXTM6x+g": 1]),
+        .init(id: .frameSynchronousBrightness, category: .display, title: "Frame-Synchronous Brightness", detail: "Enables frame-synchronous display brightness. iOS 16 and later.", values: ["/oWN4fE81uA9pCW4FmD7Ug": 1]),
 
         .init(id: .bootChime, category: .hardware, title: "Boot & Shutdown Chime", detail: "Enables the device boot and shutdown chime capability.", values: ["QHxt+hGLaBPbQJbXiUJX3w": 1]),
         .init(id: .chargeLimit, category: .hardware, title: "Charge Limit Menu", detail: "Shows the Settings menu; actual limiting depends on hardware.", values: ["37NVydb//GP/GrhuTN+exg": 1]),
@@ -127,6 +142,16 @@ enum GestaltTweakCatalog {
         .init(id: .mtpFileTransfer, category: .hardware, title: "USB File Transfer (MTP)", detail: "Enables MTP file transfer over USB.", values: ["68eiAurB2LJ96Vz/CzaAcA": 1]),
         .init(id: .alwaysOnCompass, category: .hardware, title: "Always-On Compass", detail: "Enables the always-on compass capability.", values: ["aCQx2Qq/TChnNAq1rr6Egw": 1]),
         .init(id: .secureMicrophone, category: .hardware, title: "Secure Microphone", detail: "Enables secure microphone handling.", values: ["7UhDrmrZozgwO+3AgUbHxw": 1]),
+        .init(id: .thunderbolt, category: .hardware, title: "Thunderbolt Support", detail: "Marks the device as Thunderbolt capable. iOS 16 and later.", values: ["4ec+Q3FdQ1N0HeNpOPsmfA": 1]),
+        .init(id: .usbCDisplayOutput, category: .hardware, title: "USB-C Display Output", detail: "Enables display output over USB-C. iOS 15.4 and later.", values: ["khE304sL66yzf7K+2e+0cw": 1]),
+        .init(id: .wirelessSplitting, category: .hardware, title: "Wireless Screen Splitting", detail: "Enables wireless display splitting. iOS 13 and later.", values: ["2zyzecwSf2ZYRpB3tuQhOQ": 1]),
+        .init(id: .independentSpeakerOutput, category: .hardware, title: "Independent Speaker Output", detail: "Enables independent audio output on the speaker. iOS 17.4 and later.", values: ["6VRApe6L2vc1r2s+xts9/w": 1]),
+        .init(id: .ultraLowPowerNetworking, category: .hardware, title: "Ultra-Low-Power Networking", detail: "Enables ultra-low-power networking. iOS 26 and later.", values: ["a1eUrgG+tlRzm4B5fqIdeg": 1]),
+        .init(id: .heartRateVariability, category: .hardware, title: "Heart Rate Variability", detail: "Enables heart rate variability tracking. iOS 11 and later.", values: ["/Oajtq8qODrC4XBBOULF3A": 1]),
+        .init(id: .spatialFaceTimeAudio, category: .hardware, title: "Spatial FaceTime Audio Playback", detail: "Enables spatial audio playback for FaceTime. iOS 15 and later.", values: ["/EVOCjM/Nmb2roP5ebtEFA": 1]),
+        .init(id: .hypertensivePatternMeasurements, category: .hardware, title: "Hypertensive Pattern Measurements", detail: "Enables hypertensive pattern measurements. iOS 26 and later.", values: ["4fh9efw4o1yaFqkXNCXoeA": 1]),
+        .init(id: .p3VideoRecording, category: .hardware, title: "P3 Video Recording", detail: "Enables P3 color space video recording. iOS 12 and later.", values: ["1eBwtCIwbIDdC80wiyzfow": 1]),
+        .init(id: .autoLowLightVideo, category: .hardware, title: "Auto Low-Light Video", detail: "Enables automatic low-light video recording. iOS 12 and later.", values: ["AX/UKxSHwm+OuFRIdvNAfg": 1]),
 
         .init(id: .stageManager, category: .ipad, title: "Stage Manager Support", detail: "Marks the device as supporting Stage Manager.", values: ["qeaj75wk3HF4DwQ8qbIi7g": 1]),
         .init(id: .iPadApps, category: .ipad, title: "Allow iPad Apps", detail: "Enables iPad app compatibility types on iPhone.", values: ["9MZ5AdH43csAUajl/dU+IQ": [1, 2]]),

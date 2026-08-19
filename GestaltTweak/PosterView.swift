@@ -227,7 +227,7 @@ struct TendiesView: View {
                 prompt: "Search wallpapers"
             )
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task {
                             await vm.load()
