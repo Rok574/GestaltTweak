@@ -67,7 +67,7 @@ struct ContentView: View {
                                 )
                             }
                         }
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
 
                         Section("Actions") {
                             Button {
@@ -96,7 +96,7 @@ struct ContentView: View {
                             .buttonStyle(.plain)
                             .disabled(viewModel.isRespringing)
                         }
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                     }
                     .navigationTitle("GestaltTweak")
                     .navigationBarTitleDisplayMode(.large)

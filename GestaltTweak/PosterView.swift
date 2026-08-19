@@ -36,6 +36,7 @@ struct PosterView: View {
                     }
                 }
                 .disabled(viewModel.posterFiles.isEmpty || busy)
+                .tint(.purple)
 
                 Button {
                     reset()
