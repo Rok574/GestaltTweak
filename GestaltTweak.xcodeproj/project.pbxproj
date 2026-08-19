@@ -5,21 +5,21 @@
 		/* Begin PBXBuildFile section */
 		100000000000000000000101 /* ZIPFoundation in Frameworks */ = {
 			isa = PBXBuildFile; productRef = 100000000000000000000102 /* ZIPFoundation */;
-		}
+		};
 		/* End PBXBuildFile section *//* Begin PBXFileReference section */
 		000000000000000000000120 /* GestaltTweak.app */ = {
 			isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GestaltTweak.app; sourceTree = BUILT_PRODUCTS_DIR;
-		}
+		};
 		/* End PBXFileReference section *//* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* GestaltTweak */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;			path = GestaltTweak;			sourceTree = "<group>";
-		}
+		};
 		/* End PBXFileSystemSynchronizedRootGroup section *//* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;			files = (
 			100000000000000000000101 /* ZIPFoundation in Frameworks */,
 			);
-		}
+		};
 		/* End PBXFrameworksBuildPhase section *//* Begin PBXGroup section */
 		000000000000000000000001 = {
 			isa = PBXGroup;			children = (
@@ -30,7 +30,7 @@
 			isa = PBXGroup;			children = (
 			000000000000000000000120 /* GestaltTweak.app */,
 			);			name = Products;			sourceTree = "<group>";
-		}
+		};
 		/* End PBXGroup section *//* Begin PBXNativeTarget section */
 		000000000000000100000000 /* GestaltTweak */ = {
 			isa = PBXNativeTarget;			buildConfigurationList = 000000000000000110000000 /* Build configuration list for PBXNativeTarget "GestaltTweak" */;			buildPhases = (
@@ -43,7 +43,7 @@
 			);			name = GestaltTweak;			packageProductDependencies = (
 			100000000000000000000102 /* ZIPFoundation */,
 			);			productName = GestaltTweak;			productReference = 000000000000000000000120 /* GestaltTweak.app */;			productType = "com.apple.product-type.application";
-		}
+		};
 		/* End PBXNativeTarget section *//* Begin PBXProject section */
 		000000000000000000000000 /* Project object */ = {
 			isa = PBXProject;			attributes = {
@@ -60,17 +60,17 @@
 			);			preferredProjectObjectVersion = 90;			productRefGroup = 000000000000000000000020 /* Products */;			projectDirPath = "";			projectRoot = "";			targets = (
 			000000000000000100000000 /* GestaltTweak */,
 			);
-		}
+		};
 		/* End PBXProject section *//* Begin PBXResourcesBuildPhase section */
 		000000000000000140000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;			files = (
 			);
-		}
+		};
 		/* End PBXResourcesBuildPhase section *//* Begin PBXSourcesBuildPhase section */
 		000000000000000120000000 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;			files = (
 			);
-		}
+		};
 		/* End PBXSourcesBuildPhase section *//* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "GestaltTweak" */ = {
 			isa = XCBuildConfiguration;			buildSettings = {
@@ -101,17 +101,17 @@
 				)";				SDKROOT = auto;				STRING_CATALOG_GENERATE_SYMBOLS = YES;				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";				SWIFT_APPROACHABLE_CONCURRENCY = YES;				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;				SWIFT_EMIT_LOC_STRINGS = YES;				SWIFT_OBJC_BRIDGING_HEADER = "GestaltTweak/GestaltTweak-Bridging-Header.h";				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;				SWIFT_VERSION = 5.0;				TARGETED_DEVICE_FAMILY = "1,
 				2";
 			};			name = Release;
-		}
+		};
 		/* End XCBuildConfiguration section *//* Begin XCRemoteSwiftPackageReference section */
 		100000000000000000000103 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
 			isa = XCRemoteSwiftPackageReference;			repositoryURL = "https://github.com/weichsel/ZIPFoundation";			requirement = {
 				kind = upToNextMajorVersion;				minimumVersion = 0.9.0;
 			};
-		}
+		};
 		/* End XCRemoteSwiftPackageReference section *//* Begin XCSwiftPackageProductDependency section */
 		100000000000000000000102 /* ZIPFoundation */ = {
 			isa = XCSwiftPackageProductDependency;			package = 100000000000000000000103 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;			productName = ZIPFoundation;
-		}
+		};
 		/* End XCSwiftPackageProductDependency section *//* Begin XCConfigurationList section */
 		000000000000000010000000 /* Build configuration list for PBXProject "GestaltTweak" */ = {
 			isa = XCConfigurationList;			buildConfigurations = (
@@ -123,7 +123,7 @@
 			000000000000000111000000 /* Debug configuration for PBXNativeTarget "GestaltTweak" */,
 			000000000000000112000000 /* Release configuration for PBXNativeTarget "GestaltTweak" */,
 			);			defaultConfigurationName = Release;
-		}
+		};
 		/* End XCConfigurationList section */
 	};	rootObject = 000000000000000000000000 /* Project object */;
 }
