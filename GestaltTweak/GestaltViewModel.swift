@@ -134,18 +134,18 @@ final class GestaltViewModel: ObservableObject {
             removedTweaks.remove(id)
             if id == .enableLiquidGlassLowPerformance {
                 selectedTweaks.remove(.disableLiquidGlassLowPerformance)
-                if isCurrentlyApplied(.disableLiquidGlassLowPerformance) {
+                if hasAnyAppliedKeys(.disableLiquidGlassLowPerformance) {
                     removedTweaks.insert(.disableLiquidGlassLowPerformance)
                 }
             } else if id == .disableLiquidGlassLowPerformance {
                 selectedTweaks.remove(.enableLiquidGlassLowPerformance)
-                if isCurrentlyApplied(.enableLiquidGlassLowPerformance) {
+                if hasAnyAppliedKeys(.enableLiquidGlassLowPerformance) {
                     removedTweaks.insert(.enableLiquidGlassLowPerformance)
                 }
             }
         } else {
             selectedTweaks.remove(id)
-            if isCurrentlyApplied(id) {
+            if hasAnyAppliedKeys(id) {
                 removedTweaks.insert(id)
             }
         }
@@ -168,10 +168,10 @@ final class GestaltViewModel: ObservableObject {
         return result
     }
 
-    private func isCurrentlyApplied(_ id: GestaltTweakID) -> Bool {
+    private func hasAnyAppliedKeys(_ id: GestaltTweakID) -> Bool {
         guard let definition = GestaltTweakCatalog.definition(for: id),
               let cacheExtra = plist?.cacheExtra else { return false }
-        return definition.isApplied(in: cacheExtra)
+        return definition.values.keys.contains { cacheExtra[$0] != nil }
     }
 
     func setAIRegion(enabled: Bool) {
@@ -187,13 +187,17 @@ final class GestaltViewModel: ObservableObject {
     func applySelectedTweaks() {
         guard !isBusy, var pending = plist else { return }
         do {
+            var addedKeys = Set<String>()
             for id in selectedTweaks {
                 guard let definition = GestaltTweakCatalog.definition(for: id) else { continue }
+                for key in definition.values.keys {
+                    addedKeys.insert(key)
+                }
                 try pending.apply(definition: definition)
             }
             for id in removedTweaks {
                 guard let definition = GestaltTweakCatalog.definition(for: id) else { continue }
-                for key in definition.values.keys {
+                for key in definition.values.keys where !addedKeys.contains(key) {
                     pending.removeCacheExtraValue(forKey: key)
                 }
             }
