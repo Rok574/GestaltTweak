@@ -28,4 +28,7 @@ FOUNDATION_EXPORT BOOL BadQueryBridgeAvailable(void);
 FOUNDATION_EXPORT BadQueryLease * _Nullable GTLeaseForPath(NSString *path,
                                                            NSString * _Nullable * _Nullable error);
 
+FOUNDATION_EXPORT NSArray<NSString *> * _Nullable GTListContainers(NSString *path,
+                                                                   int64_t max_inode);
+
 NS_ASSUME_NONNULL_END

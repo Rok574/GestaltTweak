@@ -221,7 +221,6 @@ struct ContentView: View {
             .textCase(.uppercase)
             .kerning(0.8)
             .foregroundStyle(.secondary)
-            .padding(.leading, 2)
     }
 
     private func featureCard(
@@ -244,17 +243,20 @@ struct ContentView: View {
                             .fill(tint.gradient)
                     )
 
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
 
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
             .padding(14)
             .background(
                 .regularMaterial,
@@ -593,7 +595,7 @@ private struct AdvancedGestaltEditor: View {
                 )
             }
         }
-        .navigationTitle("Advanced Field Editor")
+        .navigationTitle("Advanced Fields")
         .searchable(text: $searchText, prompt: "Search key or value")
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {

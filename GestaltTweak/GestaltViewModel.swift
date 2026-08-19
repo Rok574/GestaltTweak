@@ -75,6 +75,9 @@ final class GestaltViewModel: ObservableObject {
             plist = GestaltPlist(dict: dictionary)
             isDirty = false
             refreshBackups()
+            Task.detached(priority: .utility) {
+                _ = try? pb.find_pb_container()
+            }
         } catch {
             plist = nil
             report(error)

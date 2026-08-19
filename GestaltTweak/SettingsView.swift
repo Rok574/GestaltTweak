@@ -75,7 +75,7 @@ struct SettingsView: View {
                     CreditsRow(name: "neonmodder123", role: "Respring method", profile: URL(string: "https://github.com/neonmodder123")!)
                     CreditsRow(name: "skadz108", role: "Respring Swift port", profile: URL(string: "https://github.com/skadz108")!)
                 } header: {
-                    Label("Thanks", systemImage: "person.3.fill")
+                    Label("Credits", systemImage: "person.3.fill")
                 }
             }
             .navigationTitle("Settings")

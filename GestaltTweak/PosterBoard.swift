@@ -11,13 +11,13 @@ import Combine
 import Foundation
 import ZIPFoundation
 
-enum pb_error: LocalizedError {
+nonisolated enum pb_error: LocalizedError {
     case container_404
     case not_zip(URL)
     case no_descriptors(URL)
     case access_denied(String)
 
-    nonisolated var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .container_404:
             return "could not find the PosterBoard container."
@@ -50,7 +50,7 @@ func isPBArchive(_ url: URL) -> Bool {
     }
 }
 
-enum pb {
+nonisolated enum pb {
     static let pb_bid = "com.apple.PosterBoard"
     static let collections_ext = "com.apple.WallpaperKit.CollectionsPoster"
     static let photos_ext = "com.apple.PhotosUIPrivate.PhotosPosterProvider"
@@ -62,6 +62,8 @@ enum pb {
     ]
 
     private static let fm = FileManager.default
+    private static let list_cache_lock = NSLock()
+    private static var list_cache: [String: [String]] = [:]
 
     static func find_pb_container() throws -> URL {
         for root in container_roots {
@@ -88,10 +90,16 @@ enum pb {
         if norm.hasPrefix("/private/") { norm.removeFirst("/private/".count - 1) }
         if norm.hasSuffix("/") { norm.removeLast() }
 
-        guard let lease = try? acquire(norm) else { return [] }
-        defer { lease.invalidate() }
+        list_cache_lock.lock()
+        defer { list_cache_lock.unlock() }
 
-        return (try? fm.contentsOfDirectory(atPath: norm)) ?? []
+        if let cached = list_cache[norm] {
+            return cached
+        }
+
+        let list = GTListContainers(norm, 2_000_000) ?? []
+        list_cache[norm] = list
+        return list
     }
 
     static func read_meta_key(at url: URL, key: String) -> String? {

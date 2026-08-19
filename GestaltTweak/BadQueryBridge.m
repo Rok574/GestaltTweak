@@ -12,6 +12,10 @@
 
 #import <dlfcn.h>
 #import <stdlib.h>
+#import <string.h>
+#import <sys/fsgetpath.h>
+#import <sys/mount.h>
+#import <sys/stat.h>
 #import <xpc/xpc.h>
 
 static const uint64_t kBadQueryContainerClass = 13;
@@ -172,4 +176,32 @@ BOOL BadQueryBridgeAvailable(void)
 BadQueryLease *GTLeaseForPath(NSString *path, NSString **error)
 {
     return [BadQueryLease leaseForPath:path error:error];
+}
+
+NSArray<NSString *> *GTListContainers(NSString *path, int64_t max_inode)
+{
+    struct statfs sfs;
+    if (statfs(path.UTF8String, &sfs) != 0) {
+        if (statfs("/private/var", &sfs) != 0 && statfs("/var", &sfs) != 0) {
+            return nil;
+        }
+    }
+    fsid_t fsid = sfs.f_fsid;
+
+    size_t path_length = strlen(path.UTF8String);
+    char buf[1200];
+    NSMutableArray<NSString *> *result = [NSMutableArray array];
+
+    for (uint64_t ino = 1; ino <= (uint64_t)max_inode; ino++) {
+        ssize_t n = fsgetpath(buf, sizeof(buf), &fsid, ino);
+        if (n <= 0) continue;
+
+        const char *p = buf;
+        if (strncmp(p, "/private/var/", 13) == 0) p += 8;
+        if (strncmp(p, path.UTF8String, path_length) != 0 || p[path_length] != '/') continue;
+        if (strchr(p + path_length + 1, '/')) continue;
+
+        [result addObject:@(p)];
+    }
+    return result;
 }
