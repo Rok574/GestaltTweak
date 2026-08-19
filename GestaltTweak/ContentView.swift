@@ -18,58 +18,86 @@ struct ContentView: View {
         Group {
             if GestaltAccess.isRunningSupportedOS() {
                 NavigationStack {
-                    List {
-                        Section {
-                            deviceStatus
-                        } header: {
-                            Label("Device", systemImage: "iphone")
-                        } footer: {
-                            Text("Build \(GestaltAccess.currentOSBuild())")
-                        }
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 22) {
+                            hero
 
-                        Section {
-                            NavigationLink {
-                                TweakWorkbench()
-                            } label: {
-                                HStack {
-                                    Text("MobileGestalt")
-                                    if viewModel.isBusy {
-                                        Spacer()
-                                        ProgressView()
-                                            .tint(.primary)
-                                    }
+                            deviceCard
+
+                            sectionTitle("Modules")
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.flexible(), spacing: 14),
+                                    GridItem(.flexible()),
+                                ],
+                                spacing: 14
+                            ) {
+                                featureCard(
+                                    icon: "paintbrush",
+                                    tint: .pink,
+                                    title: "MobileGestalt",
+                                    subtitle: "Flip flags, pick a subtype, rename"
+                                ) {
+                                    TweakWorkbench()
+                                }
+                                featureCard(
+                                    icon: "square.and.pencil",
+                                    tint: .blue,
+                                    title: "Advanced Fields",
+                                    subtitle: "Hand-edit any raw key"
+                                ) {
+                                    AdvancedGestaltEditor()
+                                }
+                                featureCard(
+                                    icon: "archivebox",
+                                    tint: .orange,
+                                    title: "Backups",
+                                    subtitle: "Snapshots you can roll back"
+                                ) {
+                                    BackupLibrary()
+                                }
+                                featureCard(
+                                    icon: "photo.on.rectangle.angled",
+                                    tint: .purple,
+                                    title: "PosterBoard",
+                                    subtitle: "Drop in wallpaper packs"
+                                ) {
+                                    PosterView()
                                 }
                             }
-                        } header: {
-                            Label("Tweaks", systemImage: "paintbrush")
-                        }
 
-                        Section {
-                            NavigationLink {
-                                AdvancedGestaltEditor()
-                            } label: {
-                                Text("CacheExtra Fields")
+                            sectionTitle("Actions")
+                            HStack(spacing: 14) {
+                                quickAction(
+                                    icon: "bolt.fill",
+                                    tint: .green,
+                                    title: "Run Exploit"
+                                ) {
+                                    viewModel.runExploit()
+                                }
+                                quickAction(
+                                    icon: "arrow.counterclockwise",
+                                    tint: .red,
+                                    title: "Respring"
+                                ) {
+                                    viewModel.respring()
+                                }
                             }
-                        } header: {
-                            Label("Advanced", systemImage: "wrench.and.screwdriver")
-                        } footer: {
-                            Text("Only use these if you know what you're doing.\nYou could break something irreversibly.")
                         }
-
-                        Section {
-                            NavigationLink {
-                                BackupLibrary()
-                            } label: {
-                                Text("Backups & Restore")
-                            }
-                        } header: {
-                            Label("Backups", systemImage: "archivebox")
-                        } footer: {
-                            Text("A backup is created before every write. Restore to go back to a saved state.")
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
-                    .navigationTitle("GestaltTweak Everywhere")
-                    .navigationBarTitleDisplayMode(.large)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color(.systemGroupedBackground),
+                                Color.accentColor.opacity(0.06),
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        ignoresSafeAreaEdges: .all
+                    )
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button {
@@ -102,34 +130,169 @@ struct ContentView: View {
         }
     }
 
-    private var deviceStatus: some View {
-        HStack(spacing: 10) {
+    private var hero: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.indigo, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 58, height: 58)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("GestaltTweak")
+                    .font(.title2.weight(.bold))
+                Text("Tame your system file")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+    }
+
+    private var deviceCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "iphone")
+                .font(.title2)
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [.indigo, .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.aiRegionProfile?.marketingName ?? "Current Device")
+                    .font(.headline)
+                Text("Build \(GestaltAccess.currentOSBuild())")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
             if viewModel.plist == nil {
                 if viewModel.isBusy || !viewModel.hasAttemptedLoad {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Reading MobileGestalt…")
+                    Text("Reading...")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Unable to read MobileGestalt")
-                        Button("Reload", action: viewModel.load)
-                            .font(.footnote)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("Unavailable")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.orange)
+                        Button("Retry", action: viewModel.load)
+                            .font(.caption)
                     }
                 }
             } else {
-                Label {
-                    Text(viewModel.aiRegionProfile?.marketingName ?? "Current Device")
-                } icon: {
-                    Image(systemName: "iphone")
-                }
-                Spacer()
-                Text("Connected")
+                Label("Connected", systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.green)
             }
         }
+        .padding(14)
+        .background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .textCase(.uppercase)
+            .kerning(0.8)
+            .foregroundStyle(.secondary)
+            .padding(.leading, 2)
+    }
+
+    private func featureCard(
+        icon: String,
+        tint: Color,
+        title: String,
+        subtitle: String,
+        @ViewBuilder destination: () -> some View
+    ) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .fill(tint.gradient)
+                    )
+
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(
+                .regularMaterial,
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func quickAction(
+        icon: String,
+        tint: Color,
+        title: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(tint.gradient)
+                    )
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(
+                .regularMaterial,
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -141,7 +304,7 @@ private struct UnsupportedOSView: View {
                 .foregroundStyle(.secondary)
             Text("Unsupported OS Version")
                 .font(.title2.weight(.semibold))
-            Text("GestaltTweak currently supports only iOS and iPadOS 27 beta 1 through beta 4.")
+            Text("GestaltTweak supports only iOS and iPadOS 27 beta 1 through beta 4.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
         }
@@ -181,7 +344,7 @@ private struct TweakWorkbench: View {
                 TweakToggle(
                     definition: definition,
                     isOn: Binding(
-                        get: { viewModel.selectedTweaks.contains(definition.id) },
+                        get: { viewModel.isTweakEnabled(definition.id) },
                         set: { viewModel.setTweak(definition.id, enabled: $0) }
                     )
                 )
@@ -246,7 +409,7 @@ private struct TweakWorkbench: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(String(format: "%d pending changes", viewModel.stagedChangeCount))
                     .font(.subheadline.weight(.semibold))
-                Text("Automatic backup before writing")
+                Text("A backup is saved before every write")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

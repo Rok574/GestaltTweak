@@ -1,20 +1,26 @@
-# GestaltTweak Everywhere
+# GestaltTweak
+
+<p align="center">
+  <img src="GestaltTweak/Assets.xcassets/AppIcon.appiconset/AppIcon.png" width="128" alt="GestaltTweak icon">
+</p>
 
 A native SwiftUI iPhone app that uses the **bad_query** sandbox escape
-([forcequitOS/bad_query](https://github.com/forcequitOS/bad_query)) — or the
-**cmg** container-manager method as a fallback — to edit
-`com.apple.MobileGestalt.plist` **on your own device** — no Mac, no tethering.
+([forcequitOS/bad_query](https://github.com/forcequitOS/bad_query)) - or the
+**cmg** container-manager method as a fallback - to edit
+`com.apple.MobileGestalt.plist` **on your own device** - no Mac, no tethering.
 
 It reads your live MobileGestalt file, lets you toggle capability tweaks
 (Dynamic Island, Always-On Display, boot chime, charge limit, etc.), change
-the device subtype / model name, edit any raw field, and back up / restore.
+the device subtype / model name, edit any raw field, back up / restore, and
+import PosterBoard wallpaper packs (tendies).
 
-UI is modeled after [rooootdev/mond](https://github.com/rooootdev/mond): a
-clean sectioned list, an Advanced field editor, a Backups & Restore screen,
-and a Settings sheet with the exploit method picker, **Persist after reboot**
-toggle, respring tool, and credits.
+UI is a custom card-based home screen: a gradient hero header, a device status
+card, and a grid of feature cards leading into the tweak lists, an Advanced
+field editor, a Backups & Restore screen, a PosterBoard screen, and a Settings
+sheet with the exploit method picker, **Persist after reboot** toggle,
+respring tool, and credits.
 
-> **WARNING — use at your own risk.**
+> **WARNING - use at your own risk.**
 > This uses private APIs and modifies a system cache file. Incorrect values can
 > break system features, soft-brick the UI, or bootloop the device. Only use it
 > on a device you own. A backup is always created before a write, and the
@@ -22,9 +28,9 @@ toggle, respring tool, and credits.
 
 ## Supported versions
 
-Only **iOS / iPadOS 27 developer beta 1 – 4** (builds `24A5355q`, `24A5370h`,
+Only **iOS / iPadOS 27 developer beta 1 - 4** (builds `24A5355q`, `24A5370h`,
 `24A5380h`, `24A5380i`, `24A5380l`, `24A5390f`). This is a hard limit of the
-`bad_query` exploit — on any other version the app just shows "Unsupported OS
+`bad_query` exploit - on any other version the app just shows "Unsupported OS
 Version".
 
 ## How to get the IPA (no Mac required)
@@ -77,28 +83,30 @@ Open the green run, scroll to **Artifacts**, and download
 
 ### 5. Run it
 
-Open **GestaltTweak Everywhere**. If your iOS is supported it connects
+Open **GestaltTweak**. If your iOS is supported it connects
 automatically (you'll see "Connected"), then:
 
-- **Tweaks** — open MobileGestalt to toggle tweaks / Dynamic Island subtype /
-  model name, then tap **Apply**. The app backs up first, writes, verifies,
-  and resprings.
-- **Settings (gear)** — pick the exploit method (**bad_query** or **cmg**,
+- **MobileGestalt** - open the tweak list to toggle tweaks / Dynamic Island
+  subtype / model name, then tap **Apply**. The app backs up first, writes,
+  verifies, and resprings.
+- **Settings (gear)** - pick the exploit method (**bad_query** or **cmg**,
   with a Run Exploit button), toggle **Persist after reboot**, respring, and
   find credits.
-- **Advanced** — inspect or edit any key in `CacheExtra` or top level.
-- **Backups & Restore** — export, import, restore, or delete backups.
+- **Advanced Fields** - inspect or edit any key in `CacheExtra` or top level.
+- **Backups & Restore** - export, import, restore, or delete backups.
+- **PosterBoard** - import `.tendies` / `.zip` wallpaper packs and apply them
+  to the PosterBoard service.
 
 Some tweaks need a full reboot to take effect; the app tells you which.
 
 ## Troubleshooting
 
-- **"Unsupported OS Version"** — your build isn't in the supported list above.
-- **"Unable to read MobileGestalt"** — the sandbox escape didn't fire. Check
+- **"Unsupported OS Version"** - your build isn't in the supported list above.
+- **"Unable to read MobileGestalt"** - the sandbox escape didn't fire. Check
   the iOS version, reinstall, or ask the community (see credits).
-- **Tweaks disappear after reboot** — expected; the cache is rebuilt at boot.
+- **Tweaks disappear after reboot** - expected; the cache is rebuilt at boot.
   This is normal for these tools.
-- **Bundle id clash on install** — change `PRODUCT_BUNDLE_IDENTIFIER` in
+- **Bundle id clash on install** - change `PRODUCT_BUNDLE_IDENTIFIER` in
   `GestaltTweak.xcodeproj/project.pbxproj` to something else and rebuild.
 
 ## Project layout
@@ -106,9 +114,9 @@ Some tweaks need a full reboot to take effect; the app tells you which.
 ```
 GestaltTweak/
   Assets.xcassets        App icon + accent color
-  CmgExploit.swift         cmg container-manager exploit (from mond) — fallback method
+  CmgExploit.swift         cmg container-manager exploit (from mond) - fallback method
   BadQueryBridge.h/.m     bad_query integration (class 13, MobileGestalt
-                          SystemGroup, path traversal) — derived from
+                          SystemGroup, path traversal) - derived from
                           forcequitOS/bad_query
   GestaltAccess.h/.m      connect (bad_query or cmg) / read / write / verify
   GestaltModels.swift     plist model + value editor helpers
@@ -116,19 +124,22 @@ GestaltTweak/
   GestaltViewModel.swift  app state
   GestaltBackupStore.swift backups
   NeoSpringView.swift     WebKit respring (neospring)
-  ContentView.swift       mond-style main list
-  SettingsView.swift      exploit method, persist toggle, respring, credits
+  PosterBoard.swift      PosterBoard engine + tendies service (from mond)
+  PosterView.swift       PosterBoard screen + tendies explorer (masonry grid)
+  ContentView.swift      card-based home screen
+  SettingsView.swift     exploit method, persist toggle, respring, credits
 GestaltTweak.xcodeproj    Xcode project (build config mirroring GestaltEdit)
 .github/workflows/        builds the unsigned IPA on GitHub macOS runners
 ```
 
 ## Credits
 
-- [forcequitOS/bad_query](https://github.com/forcequitOS/bad_query) — the sandbox escape
-- [frs0n/GestaltEdit](https://github.com/frs0n/GestaltEdit) — architecture, MIT
-- [rooootdev/mond](https://github.com/rooootdev/mond) — tweak approaches
-- [leminlimez/Nugget](https://github.com/leminlimez/Nugget) — MobileGestalt keys & iPadOS `CacheData` patch
-- [rooootdev/neospring](https://github.com/rooootdev/neospring) — respring (neonmodder123 / skadz108)
+- [forcequitOS/bad_query](https://github.com/forcequitOS/bad_query) - the sandbox escape
+- [frs0n/GestaltEdit](https://github.com/frs0n/GestaltEdit) - architecture, MIT
+- [rooootdev/mond](https://github.com/rooootdev/mond) - tweak approaches and PosterBoard (tendies) feature
+- [leminlimez/Nugget](https://github.com/leminlimez/Nugget) - MobileGestalt keys & iPadOS `CacheData` patch
+- [rooootdev/neospring](https://github.com/rooootdev/neospring) - respring (neonmodder123 / skadz108)
+- [SerStars/Nugget-Wallpapers](https://github.com/SerStars/Nugget-Wallpapers) - tendies wallpaper catalog
 
 ## License
 

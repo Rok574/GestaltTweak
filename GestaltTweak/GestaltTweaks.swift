@@ -61,11 +61,34 @@ struct GestaltTweakDefinition: Identifiable {
     let detail: String
     let values: [String: Any]
     var isRisky = false
+
+    func isApplied(in cacheExtra: [String: Any]) -> Bool {
+        for (key, expected) in values {
+            guard let stored = cacheExtra[key],
+                  Self.valueEquals(stored, expected) else {
+                return false
+            }
+        }
+        return true
+    }
+
+    private static func valueEquals(_ lhs: Any, _ rhs: Any) -> Bool {
+        if let l = lhs as? NSNumber, let r = rhs as? NSNumber {
+            return l == r
+        }
+        if let l = lhs as? String, let r = rhs as? String {
+            return l == r
+        }
+        if let l = lhs as? NSArray, let r = rhs as? NSArray {
+            return l == r
+        }
+        return false
+    }
 }
 
 enum GestaltTweakCatalog {
     static let definitions: [GestaltTweakDefinition] = [
-        .init(id: .siriAI, category: .region, title: "Siri AI", detail: "Sets a3n5T9sFtlyQ74NEp9ESxg to 2 as an integer. Experimental — may cause boot loops.", values: ["a3n5T9sFtlyQ74NEp9ESxg": 2], isRisky: true),
+        .init(id: .siriAI, category: .region, title: "Siri AI", detail: "Sets a3n5T9sFtlyQ74NEp9ESxg to 2 as an integer. Experimental. May cause boot loops.", values: ["a3n5T9sFtlyQ74NEp9ESxg": 2], isRisky: true),
 
         .init(id: .supportsDynamicIsland, category: .display, title: "Enable Dynamic Island Capability", detail: "Nugget's alternate enable method.", values: ["YlEtTtHlNesRBMal1CqRaA": 1]),
         .init(id: .alwaysOnDisplay, category: .display, title: "Always-On Display", detail: "May increase burn-in risk on unsupported devices.", values: ["2OOJf1VhaM7NxfRok3HbWQ": 1, "j8/Omm6s1lsmTDFsXjsBfA": 1], isRisky: true),

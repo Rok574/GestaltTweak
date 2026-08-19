@@ -15,6 +15,7 @@ struct SettingsView: View {
 
     @AppStorage("method") private var method = "bad_query"
     @AppStorage("atomic_write") private var persistAfterReboot = true
+    @AppStorage("dismiss_after_import") private var dismissAfterImport = false
 
     @State private var showsRespringConfirmation = false
 
@@ -37,19 +38,21 @@ struct SettingsView: View {
                         Text("Run Exploit")
                     }
                 } header: {
-                    Label("Exploit", systemImage: "wrench.and.screwdriver")
+                    Label("Engine", systemImage: "wrench.and.screwdriver")
                 } footer: {
                     Text(method == "cmg"
-                        ? "CMG: Supports iOS 27.0 b1 - b4. Only MobileGestalt works with this method. Use it when bad_query is not working for you."
-                        : "bad_query: Supports iOS 27.0 b1 - b4. By forcequit.")
+                        ? "CMG: works on iOS 27.0 b1 - b4. Only MobileGestalt is reachable this way. Fall back to it when bad_query is a no-go."
+                        : "bad_query: works on iOS 27.0 b1 - b4. Credit to forcequit.")
                 }
 
                 Section {
                     Toggle("Persist after reboot", isOn: $persistAfterReboot)
+
+                    Toggle("Dismiss after importing", isOn: $dismissAfterImport)
                 } header: {
-                    Label("Settings", systemImage: "gear")
+                    Label("Preferences", systemImage: "gear")
                 } footer: {
-                    Text("When enabled, MobileGestalt is written in-place on the same inode, which (hopefully) prevents iOS from regenerating the cache on reboot. Disable to use atomic file replacement instead.")
+                    Text("Persist after reboot rewrites MobileGestalt in-place on the same inode so iOS (hopefully) keeps the file after a restart. Turn it off to use atomic file replacement instead. Dismiss after importing closes the wallpaper explorer once a pack is saved.")
                 }
 
                 Section {
@@ -59,9 +62,9 @@ struct SettingsView: View {
                         Text("Respring")
                     }
                 } header: {
-                    Label("Tools", systemImage: "hammer")
+                    Label("Utilities", systemImage: "hammer")
                 } footer: {
-                    Text("Respring method by neonmodder123, Swift implementation by skadz108.")
+                    Text("Respring trick by neonmodder123, Swift port by skadz108.")
                 }
 
                 Section {
@@ -72,7 +75,7 @@ struct SettingsView: View {
                     CreditsRow(name: "neonmodder123", role: "Respring method", profile: URL(string: "https://github.com/neonmodder123")!)
                     CreditsRow(name: "skadz108", role: "Respring Swift port", profile: URL(string: "https://github.com/skadz108")!)
                 } header: {
-                    Label("Credits", systemImage: "person.3.fill")
+                    Label("Thanks", systemImage: "person.3.fill")
                 }
             }
             .navigationTitle("Settings")
@@ -92,18 +95,25 @@ struct SettingsView: View {
 
     private var appInfoRow: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.accentColor.opacity(0.15))
-                .frame(width: 45, height: 45)
-                .overlay {
-                    Image(systemName: "square.and.arrow.up.on.square")
-                        .font(.system(size: 20, weight: .medium))
-                }
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.indigo, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 50, height: 50)
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("GestaltTweak Everywhere")
+                Text("GestaltTweak")
                     .font(.headline)
-                Text(versionText)
+                Text("Version \(versionText)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

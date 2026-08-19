@@ -17,11 +17,13 @@ final class GestaltViewModel: ObservableObject {
     @Published private(set) var hasAttemptedLoad = false
     @Published private(set) var backups: [GestaltBackup] = []
     @Published var selectedTweaks: Set<GestaltTweakID> = []
+    @Published private(set) var removedTweaks: Set<GestaltTweakID> = []
     @Published var dynamicIslandSubtype: Int?
     @Published var changesModelName = false
     @Published var modelName = ""
     @Published var stagesAIRegion = false
     @Published private(set) var isRespringing = false
+    @Published var posterFiles: [URL] = []
 
     private let access = GestaltAccess.shared()
 
@@ -43,6 +45,7 @@ final class GestaltViewModel: ObservableObject {
 
     var hasStagedTweaks: Bool {
         !selectedTweaks.isEmpty
+            || !removedTweaks.isEmpty
             || dynamicIslandSubtype != nil
             || (changesModelName && !modelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             || stagesAIRegion
@@ -50,6 +53,7 @@ final class GestaltViewModel: ObservableObject {
 
     var stagedChangeCount: Int {
         selectedTweaks.count
+            + removedTweaks.count
             + (dynamicIslandSubtype == nil ? 0 : 1)
             + (changesModelName ? 1 : 0)
             + (stagesAIRegion ? 1 : 0)
@@ -96,17 +100,74 @@ final class GestaltViewModel: ObservableObject {
         isRespringing = true
     }
 
+    func appendPosterFile(_ url: URL) {
+        guard isPBArchive(url) else {
+            print("(pb) ignoring unsupported file: \(url.lastPathComponent)")
+            return
+        }
+        if posterFiles.contains(url) { return }
+        _ = url.startAccessingSecurityScopedResource()
+        posterFiles.append(url)
+    }
+
+    func removePosterFiles(at offsets: IndexSet) {
+        for index in offsets {
+            posterFiles[index].stopAccessingSecurityScopedResource()
+        }
+        posterFiles.remove(atOffsets: offsets)
+    }
+
+    func clearPosterFiles() {
+        for url in posterFiles {
+            url.stopAccessingSecurityScopedResource()
+        }
+        posterFiles.removeAll()
+    }
+
     func setTweak(_ id: GestaltTweakID, enabled: Bool) {
         if enabled {
             selectedTweaks.insert(id)
+            removedTweaks.remove(id)
             if id == .enableLiquidGlassLowPerformance {
                 selectedTweaks.remove(.disableLiquidGlassLowPerformance)
+                if isCurrentlyApplied(.disableLiquidGlassLowPerformance) {
+                    removedTweaks.insert(.disableLiquidGlassLowPerformance)
+                }
             } else if id == .disableLiquidGlassLowPerformance {
                 selectedTweaks.remove(.enableLiquidGlassLowPerformance)
+                if isCurrentlyApplied(.enableLiquidGlassLowPerformance) {
+                    removedTweaks.insert(.enableLiquidGlassLowPerformance)
+                }
             }
         } else {
             selectedTweaks.remove(id)
+            if isCurrentlyApplied(id) {
+                removedTweaks.insert(id)
+            }
         }
+    }
+
+    func isTweakEnabled(_ id: GestaltTweakID) -> Bool {
+        if removedTweaks.contains(id) { return false }
+        if selectedTweaks.contains(id) { return true }
+        return activeTweaks.contains(id)
+    }
+
+    var activeTweaks: Set<GestaltTweakID> {
+        guard let cacheExtra = plist?.cacheExtra else { return [] }
+        var result = Set<GestaltTweakID>()
+        for definition in GestaltTweakCatalog.definitions {
+            if definition.isApplied(in: cacheExtra) {
+                result.insert(definition.id)
+            }
+        }
+        return result
+    }
+
+    private func isCurrentlyApplied(_ id: GestaltTweakID) -> Bool {
+        guard let definition = GestaltTweakCatalog.definition(for: id),
+              let cacheExtra = plist?.cacheExtra else { return false }
+        return definition.isApplied(in: cacheExtra)
     }
 
     func setAIRegion(enabled: Bool) {
@@ -125,6 +186,12 @@ final class GestaltViewModel: ObservableObject {
             for id in selectedTweaks {
                 guard let definition = GestaltTweakCatalog.definition(for: id) else { continue }
                 try pending.apply(definition: definition)
+            }
+            for id in removedTweaks {
+                guard let definition = GestaltTweakCatalog.definition(for: id) else { continue }
+                for key in definition.values.keys {
+                    pending.removeCacheExtraValue(forKey: key)
+                }
             }
             if let dynamicIslandSubtype {
                 try pending.setDynamicIslandSubtype(dynamicIslandSubtype)
@@ -153,6 +220,7 @@ final class GestaltViewModel: ObservableObject {
             }
             save(pending, expectedAIRegion: expectedConfiguration) { [weak self] in
                 self?.selectedTweaks.removeAll()
+                self?.removedTweaks.removeAll()
                 self?.dynamicIslandSubtype = nil
                 self?.changesModelName = false
                 self?.modelName = ""
