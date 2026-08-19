@@ -68,7 +68,6 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    CreditsRow(name: "frs0n", role: "GestaltEdit", profile: URL(string: "https://github.com/frs0n")!)
                     CreditsRow(name: "forcequit", role: "bad_query exploit", profile: URL(string: "https://github.com/forcequitOS")!)
                     CreditsRow(name: "roooot", role: "mond", profile: URL(string: "https://github.com/rooootdev")!)
                     CreditsRow(name: "leminlimez", role: "Nugget (tweak keys)", profile: URL(string: "https://github.com/leminlimez")!)

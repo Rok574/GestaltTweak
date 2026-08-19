@@ -15,7 +15,6 @@ struct PosterView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: GestaltViewModel
 
-    @State private var show_settings = false
     @State private var show_importer = false
     @State private var show_explorer = false
     @State private var busy = false
@@ -44,7 +43,7 @@ struct PosterView: View {
                 }
                 .disabled(busy)
             } footer: {
-                Text("Writes the imported packs into the PosterBoard service. PosterBoard will restart after applying.")
+                Text("Writes the imported packs into PosterBoard and restarts it.")
             }
 
             Section {
@@ -62,7 +61,7 @@ struct PosterView: View {
                 }
                 .disabled(busy)
             } footer: {
-                Text("Grab up to 5 packs per session. Past 5 the risk climbs fast, and past 15 you are asking for trouble.")
+                Text("Up to 5 packs per session.")
             }
 
             if !viewModel.posterFiles.isEmpty {
@@ -80,18 +79,6 @@ struct PosterView: View {
         }
         .navigationTitle("PosterBoard")
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    show_settings = true
-                } label: {
-                    Image(systemName: "gear")
-                }
-            }
-        }
-        .sheet(isPresented: $show_settings) {
-            SettingsView()
-        }
         .sheet(isPresented: $show_explorer) {
             TendiesView()
         }

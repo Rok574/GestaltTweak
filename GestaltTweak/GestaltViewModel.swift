@@ -19,13 +19,12 @@ final class GestaltViewModel: ObservableObject {
     @Published private(set) var backups: [GestaltBackup] = []
     @Published var selectedTweaks: Set<GestaltTweakID> = []
     @Published private(set) var removedTweaks: Set<GestaltTweakID> = []
-    @Published var dynamicIslandSubtype: Int?
+    @Published private(set) var stagedSubtype: DynamicIslandChange?
     @Published var modelName = ""
     @Published private(set) var stagesModelName = false
     @Published private(set) var unstagesModelName = false
     @Published var stagesAIRegion = false
     @Published private(set) var unstageAIRegion = false
-    @Published var restoreDeviceIdentity = false
     @Published private(set) var isRespringing = false
     @Published var posterFiles: [URL] = []
 
@@ -88,26 +87,62 @@ final class GestaltViewModel: ObservableObject {
         return artwork["ArtworkDeviceProductDescription"] as? String
     }
 
+    /// The subtype currently in the plist, if the artwork dictionary has one.
+    var currentSubtype: Int? {
+        guard let artwork = plist?.cacheExtra[Self.artworkKey] as? [String: Any] else {
+            return nil
+        }
+        return artwork["ArtworkDeviceSubType"] as? Int
+    }
+
+    /// What the subtype picker should show right now, mirroring the applied
+    /// value so it is "detected" rather than defaulting to No Change.
+    var displayedSubtypeSelection: DynamicIslandSelection {
+        if let stagedSubtype {
+            switch stagedSubtype {
+            case .set(let value): return .subtype(value)
+            case .restore: return .original
+            }
+        } else if let current = currentSubtype {
+            return .subtype(current)
+        } else {
+            return .noChange
+        }
+    }
+
+    func setDynamicIslandSelection(_ selection: DynamicIslandSelection) {
+        switch selection {
+        case .noChange:
+            stagedSubtype = nil
+        case .original:
+            stagedSubtype = .restore
+        case .subtype(let value):
+            if value == currentSubtype {
+                stagedSubtype = nil
+            } else {
+                stagedSubtype = .set(value)
+            }
+        }
+    }
+
     var hasStagedTweaks: Bool {
         !selectedTweaks.isEmpty
             || !removedTweaks.isEmpty
             || unstageAIRegion
-            || dynamicIslandSubtype != nil
+            || stagedSubtype != nil
             || stagesModelName
             || unstagesModelName
             || stagesAIRegion
-            || restoreDeviceIdentity
     }
 
     var stagedChangeCount: Int {
         selectedTweaks.count
             + removedTweaks.count
             + (unstageAIRegion ? 1 : 0)
-            + (dynamicIslandSubtype == nil ? 0 : 1)
+            + (stagedSubtype == nil ? 0 : 1)
             + (stagesModelName ? 1 : 0)
             + (unstagesModelName ? 1 : 0)
             + (stagesAIRegion ? 1 : 0)
-            + (restoreDeviceIdentity ? 1 : 0)
     }
 
     func load() {
@@ -286,9 +321,14 @@ final class GestaltViewModel: ObservableObject {
                 try pending.apply(definition: definition)
             }
 
-            if let dynamicIslandSubtype {
-                try pending.setDynamicIslandSubtype(dynamicIslandSubtype)
-                addedKeys.formUnion([Self.artworkKey, Self.dynamicIslandSupportKey])
+            if let stagedSubtype {
+                switch stagedSubtype {
+                case .set(let value):
+                    try pending.setDynamicIslandSubtype(value)
+                    addedKeys.formUnion([Self.artworkKey, Self.dynamicIslandSupportKey])
+                case .restore:
+                    pending.restoreDynamicIsland(from: pristineCacheExtra)
+                }
             }
 
             if stagesModelName {
@@ -308,10 +348,6 @@ final class GestaltViewModel: ObservableObject {
                 if id == .iPadOS, let pristine = pristineCacheData {
                     pending.dict["CacheData"] = pristine
                 }
-            }
-
-            if restoreDeviceIdentity {
-                pending.restoreDeviceIdentity(from: pristineCacheExtra)
             }
 
             var expectedConfiguration: AIRegionConfiguration?
@@ -337,12 +373,11 @@ final class GestaltViewModel: ObservableObject {
             save(pending, expectedAIRegion: expectedConfiguration) { [weak self] in
                 self?.selectedTweaks.removeAll()
                 self?.removedTweaks.removeAll()
-                self?.dynamicIslandSubtype = nil
+                self?.stagedSubtype = nil
                 self?.stagesModelName = false
                 self?.unstagesModelName = false
                 self?.stagesAIRegion = false
                 self?.unstageAIRegion = false
-                self?.restoreDeviceIdentity = false
             }
         } catch {
             report(error)
@@ -555,6 +590,19 @@ final class GestaltViewModel: ObservableObject {
             pending.setCacheExtra(artwork, forKey: Self.artworkKey)
         }
     }
+}
+
+/// A pending write for the Dynamic Island subtype.
+enum DynamicIslandChange: Hashable {
+    case set(Int)
+    case restore
+}
+
+/// What the subtype picker currently shows.
+enum DynamicIslandSelection: Hashable {
+    case noChange
+    case original
+    case subtype(Int)
 }
 
 private enum GestaltEditError: LocalizedError {

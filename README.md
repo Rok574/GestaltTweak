@@ -53,7 +53,6 @@ This app relies on specific kernel/sandbox vulnerabilities and supports **iOS / 
 GestaltTweak is made possible thanks to the work of the following developers and projects:
 
 - [forcequitOS/bad_query](https://github.com/forcequitOS/bad_query) – Primary sandbox escape method
-- [frs0n/GestaltEdit](https://github.com/frs0n/GestaltEdit) – Project architecture inspiration (MIT)
 - [rooootdev/mond](https://github.com/rooootdev/mond) – Implementations for PosterBoard feature
 - [leminlimez/Nugget](https://github.com/leminlimez/Nugget) – MobileGestalt key mappings and iPadOS `CacheData` patch
 - [rooootdev/neospring](https://github.com/rooootdev/neospring) – Respring implementation (neonmodder123 / skadz108)

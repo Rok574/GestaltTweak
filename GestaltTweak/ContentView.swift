@@ -70,21 +70,19 @@ struct ContentView: View {
                             Button {
                                 viewModel.runExploit()
                             } label: {
-                                moduleRow(
+                                actionRow(
                                     icon: "bolt.fill",
                                     tint: .green,
-                                    title: "Run Exploit",
-                                    subtitle: "Make MobileGestalt writable"
+                                    title: "Run Exploit"
                                 )
                             }
                             Button {
                                 viewModel.respring()
                             } label: {
-                                moduleRow(
+                                actionRow(
                                     icon: "arrow.counterclockwise",
                                     tint: .red,
-                                    title: "Respring",
-                                    subtitle: "Reboot the SpringBoard"
+                                    title: "Respring"
                                 )
                             }
                         }
@@ -200,6 +198,25 @@ struct ContentView: View {
             }
         }
     }
+
+    private func actionRow(
+        icon: String,
+        tint: Color,
+        title: String
+    ) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(tint)
+                )
+            Text(title)
+                .font(.body)
+        }
+    }
 }
 
 private struct UnsupportedOSView: View {
@@ -225,44 +242,31 @@ private struct TweakWorkbench: View {
     var body: some View {
         List {
             if viewModel.plist != nil {
-                Section {
-                    Picker("Dynamic Island Subtype", selection: Binding<Int?>(
-                        get: { viewModel.dynamicIslandSubtype },
-                        set: { newValue in
-                            viewModel.dynamicIslandSubtype = newValue
-                            viewModel.restoreDeviceIdentity = false
-                        }
-                    )) {
-                        Text("No Change").tag(Int?.none)
-                        ForEach(DynamicIslandOption.all) { option in
-                            Text("\(option.subtype) · \(option.title)").tag(Int?.some(option.subtype))
-                        }
-                    }
-                    Toggle("Custom Model Name", isOn: Binding(
-                        get: { viewModel.modelNameToggleState },
-                        set: { on in
-                            viewModel.setModelNameToggled(on)
-                            if on { viewModel.restoreDeviceIdentity = false }
-                        }
-                    ))
-                    if viewModel.modelNameToggleState {
-                        TextField("Model Name", text: $viewModel.modelName)
-                            .textInputAutocapitalization(.words)
-                    }
-                    Toggle("Restore Original Identity", isOn: Binding(
-                        get: { viewModel.restoreDeviceIdentity },
-                        set: { on in
-                            viewModel.restoreDeviceIdentity = on
-                            if on {
-                                viewModel.dynamicIslandSubtype = nil
-                                viewModel.clearModelNameStaging()
+                if deviceIdentityMatchesQuery {
+                    Section {
+                        Picker("Dynamic Island Subtype", selection: Binding<DynamicIslandSelection>(
+                            get: { viewModel.displayedSubtypeSelection },
+                            set: { viewModel.setDynamicIslandSelection($0) }
+                        )) {
+                            Text("Original").tag(DynamicIslandSelection.original)
+                            Text("No Change").tag(DynamicIslandSelection.noChange)
+                            ForEach(DynamicIslandOption.all) { option in
+                                Text("\(option.subtype) · \(option.title)").tag(DynamicIslandSelection.subtype(option.subtype))
                             }
                         }
-                    ))
-                } header: {
-                    Text("Device Identity")
-                } footer: {
-                    Text("Restore Original writes the stock subtype, model name, and Dynamic Island flag back. The subtype picker writes ArtworkDeviceSubType and the Dynamic Island support flag.")
+                        Toggle("Custom Model Name", isOn: Binding(
+                            get: { viewModel.modelNameToggleState },
+                            set: { viewModel.setModelNameToggled($0) }
+                        ))
+                        if viewModel.modelNameToggleState {
+                            TextField("Model Name", text: $viewModel.modelName)
+                                .textInputAutocapitalization(.words)
+                        }
+                    } header: {
+                        Text("Device Identity")
+                    } footer: {
+                        Text("The subtype picker writes ArtworkDeviceSubType and the Dynamic Island support flag. No Change leaves the current value; Original restores the stock value.")
+                    }
                 }
 
                 ForEach(GestaltTweakCategory.allCases) { category in
@@ -389,6 +393,13 @@ private struct TweakWorkbench: View {
             || "region".localizedCaseInsensitiveContains(q)
     }
 
+    private var deviceIdentityMatchesQuery: Bool {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if q.isEmpty { return true }
+        let haystack = "device identity subtype model name island restore original"
+        return haystack.localizedCaseInsensitiveContains(q)
+    }
+
     private var hasAnyResults: Bool {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if q.isEmpty { return true }
@@ -409,9 +420,15 @@ private struct TweakWorkbench: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Apply") { viewModel.applySelectedTweaks() }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isBusy)
+            Button {
+                viewModel.applySelectedTweaks()
+            } label: {
+                Label("Apply", systemImage: "checkmark")
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .disabled(!viewModel.hasStagedTweaks || viewModel.isBusy)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -441,7 +458,7 @@ private struct BackupLibrary: View {
                 }
                 .disabled(viewModel.isBusy)
             } footer: {
-                Text("Importing only adds a file to the backup library. It does not write immediately. The original plist is also backed up before every write.")
+                Text("The original plist is backed up before every write.")
             }
 
                 Section("Local Backups") {
