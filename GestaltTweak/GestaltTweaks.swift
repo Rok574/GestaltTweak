@@ -50,6 +50,17 @@ enum GestaltTweakID: String, CaseIterable, Identifiable {
     case alwaysOnDisplayVibrancy
     case siriAI
     case pulseWidthModulation
+    case highLuminanceAOD
+    case hdrPhotoDisplay
+    case twilight
+    case grayDimming
+    case contextualVolume
+    case faceID
+    case usbC
+    case mtpFileTransfer
+    case alwaysOnCompass
+    case secureMicrophone
+    case audioMix
 
     var id: String { rawValue }
 }
@@ -98,6 +109,11 @@ enum GestaltTweakCatalog {
         .init(id: .enableLiquidGlassLowPerformance, category: .display, title: "Enable Liquid Glass Low-Performance Mode", detail: "For iOS 26 and later.", values: ["SAGvsp6O6kAQ4fEfDJpC4Q": 1]),
         .init(id: .disableLiquidGlassLowPerformance, category: .display, title: "Disable Liquid Glass Low-Performance Mode", detail: "Mutually exclusive with the option above.", values: ["SAGvsp6O6kAQ4fEfDJpC4Q": 0]),
         .init(id: .pulseWidthModulation, category: .display, title: "Pulse Width Modulation", detail: "Exposes the display PWM capability.", values: ["6IejgN+1Fmu5/QrZFOIeNw": 1]),
+        .init(id: .highLuminanceAOD, category: .display, title: "High-Luminance Always-On Display", detail: "Allows Always-On Display to reach a higher brightness level. iOS 27 and later.", values: ["7brdL5xrEUWnlF9C0kdg5A": 1]),
+        .init(id: .hdrPhotoDisplay, category: .display, title: "HDR Photo Display", detail: "Enables true HDR rendering for photos.", values: ["a1r7npIrhXsZ7SmKRKC1eA": 1]),
+        .init(id: .twilight, category: .display, title: "Twilight", detail: "Enables the Twilight screen mode capability. iOS 17.4 and later.", values: ["1Bk5Dr0hTb0bYXl04068MQ": 1]),
+        .init(id: .grayDimming, category: .display, title: "Gray Dimming", detail: "Enables gray-scale screen dimming. iOS 26 and later.", values: ["1cPL2NOPt23mHxhn0J4xPA": 1]),
+        .init(id: .contextualVolume, category: .display, title: "Contextual Volume", detail: "Enables the contextual volume UI. iOS 26 and later.", values: ["7AqG7ADB9UZgLLYKd9ZhrQ": 1]),
 
         .init(id: .bootChime, category: .hardware, title: "Boot & Shutdown Chime", detail: "Enables the device boot and shutdown chime capability.", values: ["QHxt+hGLaBPbQJbXiUJX3w": 1]),
         .init(id: .chargeLimit, category: .hardware, title: "Charge Limit Menu", detail: "Shows the Settings menu; actual limiting depends on hardware.", values: ["37NVydb//GP/GrhuTN+exg": 1]),
@@ -106,6 +122,11 @@ enum GestaltTweakCatalog {
         .init(id: .pencil, category: .hardware, title: "Apple Pencil Settings", detail: "Shows the Apple Pencil settings page.", values: ["yhHcB0iH0d1XzPO/CFd3ow": 1]),
         .init(id: .actionButton, category: .hardware, title: "Action Button Settings", detail: "Shows the Action Button settings page.", values: ["cT44WE1EohiwRzhsZ8xEsw": 1]),
         .init(id: .collisionSOS, category: .hardware, title: "Collision SOS", detail: "Shows collision detection in SOS settings.", values: ["HCzWusHQwZDea6nNhaKndw": 1]),
+        .init(id: .faceID, category: .hardware, title: "Face ID", detail: "Marks the device as Face ID capable. Risky without TrueDepth hardware.", values: ["8olRm6C1xqr7AJGpLRnpSw": 1], isRisky: true),
+        .init(id: .usbC, category: .hardware, title: "USB-C Support", detail: "Marks the device as USB-C capable.", values: ["BWoQXWXYITrPRpFyc9xTLw": 1]),
+        .init(id: .mtpFileTransfer, category: .hardware, title: "USB File Transfer (MTP)", detail: "Enables MTP file transfer over USB.", values: ["68eiAurB2LJ96Vz/CzaAcA": 1]),
+        .init(id: .alwaysOnCompass, category: .hardware, title: "Always-On Compass", detail: "Enables the always-on compass capability.", values: ["aCQx2Qq/TChnNAq1rr6Egw": 1]),
+        .init(id: .secureMicrophone, category: .hardware, title: "Secure Microphone", detail: "Enables secure microphone handling.", values: ["7UhDrmrZozgwO+3AgUbHxw": 1]),
 
         .init(id: .stageManager, category: .ipad, title: "Stage Manager Support", detail: "Marks the device as supporting Stage Manager.", values: ["qeaj75wk3HF4DwQ8qbIi7g": 1]),
         .init(id: .iPadApps, category: .ipad, title: "Allow iPad Apps", detail: "Enables iPad app compatibility types on iPhone.", values: ["9MZ5AdH43csAUajl/dU+IQ": [1, 2]]),
@@ -113,7 +134,8 @@ enum GestaltTweakCatalog {
 
         .init(id: .internalInstall, category: .internalFeatures, title: "Apple Internal Install", detail: "Enables internal capabilities such as Metal HUD; some services may misbehave.", values: ["EqrsVvjcYDdxHBiQmGhAWw": 1], isRisky: true),
         .init(id: .internalStorage, category: .internalFeatures, title: "Internal Storage View", detail: "Shows internal files in Storage settings; high risk on some iPads.", values: ["LBJfwOEzExRxzlAnSuI7eg": 1], isRisky: true),
-        .init(id: .securityResearchDevice, category: .internalFeatures, title: "Security Research Device Mode", detail: "Marks the device as a Security Research Device.", values: ["XYlJKKkj2hztRP1NWWnhlw": 1], isRisky: true)
+        .init(id: .securityResearchDevice, category: .internalFeatures, title: "Security Research Device Mode", detail: "Marks the device as a Security Research Device.", values: ["XYlJKKkj2hztRP1NWWnhlw": 1], isRisky: true),
+        .init(id: .audioMix, category: .internalFeatures, title: "Audio Mix", detail: "Enables the audio mix capability. iOS 26 and later.", values: ["aVL5GE3tx0LSCI/ErfrJGA": 1])
     ]
 
     static func definition(for id: GestaltTweakID) -> GestaltTweakDefinition? {
