@@ -435,7 +435,12 @@ private struct TweakToggle: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(definition.title)
-                    if definition.isRisky {
+                    if definition.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Locked")
+                    } else if definition.isRisky {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
@@ -447,7 +452,9 @@ private struct TweakToggle: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .opacity(definition.isLocked ? 0.5 : 1)
         }
+        .disabled(definition.isLocked)
     }
 }
 
