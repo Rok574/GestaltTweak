@@ -25,4 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT BOOL BadQueryBridgeAvailable(void);
 
+FOUNDATION_EXPORT BadQueryLease * _Nullable GTLeaseForPath(NSString *path,
+                                                           NSString * _Nullable * _Nullable error);
+
 NS_ASSUME_NONNULL_END

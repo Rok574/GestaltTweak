@@ -187,7 +187,7 @@ enum pb {
 
     private static func acquire(_ path: String) throws -> BadQueryLease {
         var failure: NSString?
-        guard let lease = BadQueryLease.lease(forPath: path, error: &failure) else {
+        guard let lease = GTLeaseForPath(path, &failure) else {
             throw pb_error.access_denied((failure as String?) ?? path)
         }
         return lease

@@ -168,3 +168,8 @@ BOOL BadQueryBridgeAvailable(void)
 }
 
 @end
+
+BadQueryLease *GTLeaseForPath(NSString *path, NSString **error)
+{
+    return [BadQueryLease leaseForPath:path error:error];
+}
