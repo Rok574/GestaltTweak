@@ -2,9 +2,9 @@
 //  GestaltAccess.h
 //  GestaltTweak
 //
-//  High-level service that uses bad_query to acquire a read/write sandbox
-//  extension, then reads, edits, saves and backs up
-//  com.apple.MobileGestalt.plist.
+//  High-level service that acquires a read/write sandbox extension (either
+//  via the bad_query path traversal or the cmg container-manager method),
+//  then reads, edits, saves and backs up com.apple.MobileGestalt.plist.
 //
 //  Licensed under the MIT License. Portions derived from frs0n/GestaltEdit.
 //

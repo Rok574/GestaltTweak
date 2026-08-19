@@ -48,6 +48,8 @@ enum GestaltTweakID: String, CaseIterable, Identifiable {
     case collisionSOS
     case alwaysOnDisplay
     case alwaysOnDisplayVibrancy
+    case siriAI
+    case pulseWidthModulation
 
     var id: String { rawValue }
 }
@@ -63,12 +65,15 @@ struct GestaltTweakDefinition: Identifiable {
 
 enum GestaltTweakCatalog {
     static let definitions: [GestaltTweakDefinition] = [
+        .init(id: .siriAI, category: .region, title: "Siri AI", detail: "Sets a3n5T9sFtlyQ74NEp9ESxg to 2 as an integer. Experimental — may cause boot loops.", values: ["a3n5T9sFtlyQ74NEp9ESxg": 2], isRisky: true),
+
         .init(id: .supportsDynamicIsland, category: .display, title: "Enable Dynamic Island Capability", detail: "Nugget's alternate enable method.", values: ["YlEtTtHlNesRBMal1CqRaA": 1]),
         .init(id: .alwaysOnDisplay, category: .display, title: "Always-On Display", detail: "May increase burn-in risk on unsupported devices.", values: ["2OOJf1VhaM7NxfRok3HbWQ": 1, "j8/Omm6s1lsmTDFsXjsBfA": 1], isRisky: true),
         .init(id: .alwaysOnDisplayVibrancy, category: .display, title: "AOD Vibrancy", detail: "Use this when AOD rendering looks incorrect.", values: ["ykpu7qyhqFweVMKtxNylWA": 1]),
         .init(id: .disableParallax, category: .display, title: "Disable Wallpaper Parallax", detail: "Stops wallpaper motion based on device movement.", values: ["UIParallaxCapability": 0]),
         .init(id: .enableLiquidGlassLowPerformance, category: .display, title: "Enable Liquid Glass Low-Performance Mode", detail: "For iOS 26 and later.", values: ["SAGvsp6O6kAQ4fEfDJpC4Q": 1]),
         .init(id: .disableLiquidGlassLowPerformance, category: .display, title: "Disable Liquid Glass Low-Performance Mode", detail: "Mutually exclusive with the option above.", values: ["SAGvsp6O6kAQ4fEfDJpC4Q": 0]),
+        .init(id: .pulseWidthModulation, category: .display, title: "Pulse Width Modulation", detail: "Exposes the display PWM capability.", values: ["6IejgN+1Fmu5/QrZFOIeNw": 1]),
 
         .init(id: .bootChime, category: .hardware, title: "Boot & Shutdown Chime", detail: "Enables the device boot and shutdown chime capability.", values: ["QHxt+hGLaBPbQJbXiUJX3w": 1]),
         .init(id: .chargeLimit, category: .hardware, title: "Charge Limit Menu", detail: "Shows the Settings menu; actual limiting depends on hardware.", values: ["37NVydb//GP/GrhuTN+exg": 1]),

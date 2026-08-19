@@ -12,18 +12,76 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @EnvironmentObject private var viewModel: GestaltViewModel
 
+    @State private var showsSettings = false
+
     var body: some View {
         Group {
             if GestaltAccess.isRunningSupportedOS() {
-                TabView {
-                    TweakWorkbench()
-                        .tabItem { Label("Tools", systemImage: "switch.2") }
+                NavigationStack {
+                    List {
+                        Section {
+                            deviceStatus
+                        } header: {
+                            Label("Device", systemImage: "iphone")
+                        } footer: {
+                            Text("Build \(GestaltAccess.currentOSBuild())")
+                        }
 
-                    NavigationStack { AdvancedGestaltEditor() }
-                        .tabItem { Label("Fields", systemImage: "list.bullet.rectangle") }
+                        Section {
+                            NavigationLink {
+                                TweakWorkbench()
+                            } label: {
+                                HStack {
+                                    Text("MobileGestalt")
+                                    if viewModel.isBusy {
+                                        Spacer()
+                                        ProgressView()
+                                            .tint(.primary)
+                                    }
+                                }
+                            }
+                        } header: {
+                            Label("Tweaks", systemImage: "paintbrush")
+                        }
 
-                    BackupLibrary()
-                        .tabItem { Label("Restore", systemImage: "archivebox") }
+                        Section {
+                            NavigationLink {
+                                AdvancedGestaltEditor()
+                            } label: {
+                                Text("CacheExtra Fields")
+                            }
+                        } header: {
+                            Label("Advanced", systemImage: "wrench.and.screwdriver")
+                        } footer: {
+                            Text("Only use these if you know what you're doing.\nYou could break something irreversibly.")
+                        }
+
+                        Section {
+                            NavigationLink {
+                                BackupLibrary()
+                            } label: {
+                                Text("Backups & Restore")
+                            }
+                        } header: {
+                            Label("Backups", systemImage: "archivebox")
+                        } footer: {
+                            Text("A backup is created before every write. Restore to go back to a saved state.")
+                        }
+                    }
+                    .navigationTitle("GestaltTweak Everywhere")
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button {
+                                showsSettings = true
+                            } label: {
+                                Image(systemName: "gear")
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showsSettings) {
+                        SettingsView()
+                    }
                 }
                 .task { viewModel.load() }
             } else {
@@ -41,6 +99,36 @@ struct ContentView: View {
                 message: Text(notice.message),
                 dismissButton: .default(Text("OK"))
             )
+        }
+    }
+
+    private var deviceStatus: some View {
+        HStack(spacing: 10) {
+            if viewModel.plist == nil {
+                if viewModel.isBusy || !viewModel.hasAttemptedLoad {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Reading MobileGestalt…")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Unable to read MobileGestalt")
+                        Button("Reload", action: viewModel.load)
+                            .font(.footnote)
+                    }
+                }
+            } else {
+                Label {
+                    Text(viewModel.aiRegionProfile?.marketingName ?? "Current Device")
+                } icon: {
+                    Image(systemName: "iphone")
+                }
+                Spacer()
+                Text("Connected")
+                    .foregroundStyle(.green)
+            }
         }
     }
 }
@@ -65,27 +153,23 @@ private struct TweakWorkbench: View {
     @EnvironmentObject private var viewModel: GestaltViewModel
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section { deviceStatus }
+        List {
+            if viewModel.plist != nil {
+                tweakSection(.region)
+                dynamicIslandSection
+                modelNameSection
 
-                if viewModel.plist != nil {
-                    tweakSection(.region)
-                    dynamicIslandSection
-                    modelNameSection
-
-                    ForEach(GestaltTweakCategory.allCases.filter { $0 != .region }) { category in
-                        tweakSection(category)
-                    }
+                ForEach(GestaltTweakCategory.allCases.filter { $0 != .region }) { category in
+                    tweakSection(category)
                 }
             }
-            .navigationTitle("MobileGestalt")
-            .navigationBarTitleDisplayMode(.large)
-            .refreshable { viewModel.load() }
-            .safeAreaInset(edge: .bottom) {
-                if viewModel.hasStagedTweaks {
-                    applyBar
-                }
+        }
+        .navigationTitle("MobileGestalt")
+        .navigationBarTitleDisplayMode(.large)
+        .refreshable { viewModel.load() }
+        .safeAreaInset(edge: .bottom) {
+            if viewModel.hasStagedTweaks {
+                applyBar
             }
         }
     }
@@ -111,7 +195,7 @@ private struct TweakWorkbench: View {
                 ) {
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 6) {
-                            Text("Enable Siri AI (US Region)")
+                            Text("Apple Intelligence")
                             if viewModel.requiresForcedAIEnable {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.caption)
@@ -132,33 +216,6 @@ private struct TweakWorkbench: View {
     }
 
     @ViewBuilder
-    private var deviceStatus: some View {
-        if viewModel.plist == nil {
-            HStack(spacing: 10) {
-                if viewModel.isBusy || !viewModel.hasAttemptedLoad {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Reading MobileGestalt…")
-                } else {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Unable to read MobileGestalt")
-                        Button("Reload", action: viewModel.load)
-                            .font(.footnote)
-                    }
-                }
-            }
-        } else {
-            LabeledContent {
-                Text("Connected")
-                    .foregroundStyle(.green)
-            } label: {
-                Label(viewModel.aiRegionProfile?.marketingName ?? "Current Device", systemImage: "iphone")
-            }
-        }
-    }
-
     private var dynamicIslandSection: some View {
         Section {
             Picker("Device Subtype", selection: $viewModel.dynamicIslandSubtype) {
@@ -235,25 +292,24 @@ private struct BackupLibrary: View {
     @State private var showsBackupImporter = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Button {
-                        viewModel.createBackup()
-                    } label: {
-                        Label("Back Up Current MobileGestalt", systemImage: "plus.circle.fill")
-                    }
-                    .disabled(viewModel.plist == nil || viewModel.isBusy)
-
-                    Button {
-                        showsBackupImporter = true
-                    } label: {
-                        Label("Import Backup", systemImage: "square.and.arrow.down")
-                    }
-                    .disabled(viewModel.isBusy)
-                } footer: {
-                    Text("Importing only adds a file to the backup library. It does not write immediately. The original plist is also backed up before every write.")
+        List {
+            Section {
+                Button {
+                    viewModel.createBackup()
+                } label: {
+                    Label("Back Up Current MobileGestalt", systemImage: "plus.circle.fill")
                 }
+                .disabled(viewModel.plist == nil || viewModel.isBusy)
+
+                Button {
+                    showsBackupImporter = true
+                } label: {
+                    Label("Import Backup", systemImage: "square.and.arrow.down")
+                }
+                .disabled(viewModel.isBusy)
+            } footer: {
+                Text("Importing only adds a file to the backup library. It does not write immediately. The original plist is also backed up before every write.")
+            }
 
                 Section("Local Backups") {
                     if viewModel.backups.isEmpty {
@@ -299,10 +355,9 @@ private struct BackupLibrary: View {
                     backupToRestore = nil
                 }
                 Button("Cancel", role: .cancel) { backupToRestore = nil }
-            } message: {
+} message: {
                 Text("The current file will be backed up first. SpringBoard will refresh automatically after restoring.")
             }
-        }
     }
 }
 

@@ -11,6 +11,7 @@
 
 #import "GestaltAccess.h"
 #import "BadQueryBridge.h"
+#import "GestaltTweak-Swift.h"
 
 #import <errno.h>
 #import <fcntl.h>
@@ -65,6 +66,7 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
 @implementation GestaltAccess
 {
     BadQueryLease *_activeBadQueryLease;
+    NSString *_lastMethod;
 }
 
 + (instancetype)shared
@@ -105,6 +107,22 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
     );
 }
 
+/// The selected exploit method, read from UserDefaults ("bad_query" or "cmg").
++ (NSString *)currentMethod
+{
+    NSString *method = [[NSUserDefaults standardUserDefaults] stringForKey:@"method"];
+    return method.length > 0 ? method : @"bad_query";
+}
+
+/// Whether the current plist writes should be done in-place on the same inode.
+/// Mirrors mond's "Persist after reboot" toggle: ON (default) writes in-place
+/// to try to survive a reboot; OFF uses atomic file replacement instead.
++ (BOOL)writesInPlace
+{
+    NSNumber *setting = [[NSUserDefaults standardUserDefaults] objectForKey:@"atomic_write"];
+    return setting ? setting.boolValue : YES;
+}
+
 #pragma mark - Connection
 
 - (BOOL)connectWithError:(NSError **)error
@@ -115,8 +133,39 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
         return NO;
     }
 
-    if (self.isConnected && _activeBadQueryLease.isActive &&
-        self.plistPath.length > 0) {
+    NSString *method = GestaltAccess.currentMethod;
+    BOOL usesCmg = [method isEqualToString:@"cmg"];
+
+    if (![_lastMethod isEqualToString:method]) {
+        [_activeBadQueryLease invalidate];
+        _activeBadQueryLease = nil;
+        self.isConnected = NO;
+        self.plistPath = nil;
+        _lastMethod = [method copy];
+    }
+
+    if (self.isConnected) {
+        if (error) *error = nil;
+        return YES;
+    }
+
+    NSString *plistPath = [kMobileGestaltCacheDirectory
+        stringByAppendingPathComponent:kGestaltPlistFileName];
+
+    if (usesCmg) {
+        if ([CmgExploit run] < 0) {
+            if (error) *error = GestaltError(2,
+                @"cmg exploit failed (unsupported build or the ContainerManager API is unavailable).");
+            return NO;
+        }
+        if (!GestaltCanOpenReadWrite(plistPath)) {
+            if (error) *error = GestaltError(3,
+                @"cmg acquired a sandbox extension, but the MobileGestalt plist is not writable.");
+            return NO;
+        }
+
+        self.plistPath = plistPath;
+        self.isConnected = YES;
         if (error) *error = nil;
         return YES;
     }
@@ -134,8 +183,6 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
 
     NSString *badQueryTarget = [kBadQueryMobileGestaltCacheDirectory
         stringByAppendingPathComponent:kGestaltPlistFileName];
-    NSString *badQueryPlist = [kMobileGestaltCacheDirectory
-        stringByAppendingPathComponent:kGestaltPlistFileName];
     NSString *badQueryDetail = nil;
     BadQueryLease *badQueryLease = [BadQueryLease leaseForPath:badQueryTarget
                                                         error:&badQueryDetail];
@@ -144,7 +191,7 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
             badQueryDetail ?: @"bad_query failed.");
         return NO;
     }
-    if (!GestaltCanOpenReadWrite(badQueryPlist)) {
+    if (!GestaltCanOpenReadWrite(plistPath)) {
         [badQueryLease invalidate];
         if (error) *error = GestaltError(3,
             @"bad_query acquired a sandbox extension, but the MobileGestalt plist is not writable.");
@@ -153,7 +200,7 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
 
     _activeBadQueryLease = badQueryLease;
     self.isConnected = YES;
-    self.plistPath = badQueryPlist;
+    self.plistPath = plistPath;
     if (error) *error = nil;
     return YES;
 }
@@ -234,31 +281,62 @@ static BOOL GestaltWriteAll(int fd, NSData *data)
         return NO;
     }
 
-    int fd = open(targetPath.fileSystemRepresentation,
-                  O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
-    if (fd < 0) {
-        if (error) *error = GestaltError(9,
-            [NSString stringWithFormat:@"Failed to open the plist (errno=%d).", errno]);
-        return NO;
-    }
+    if (GestaltAccess.writesInPlace) {
+        int fd = open(targetPath.fileSystemRepresentation,
+                      O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+        if (fd < 0) {
+            if (error) *error = GestaltError(9,
+                [NSString stringWithFormat:@"Failed to open the plist (errno=%d).", errno]);
+            return NO;
+        }
 
-    BOOL wrote = ftruncate(fd, 0) == 0 &&
-        lseek(fd, 0, SEEK_SET) == 0 &&
-        GestaltWriteAll(fd, data) &&
-        fsync(fd) == 0;
-    int writeErrno = errno;
+        BOOL wrote = ftruncate(fd, 0) == 0 &&
+            lseek(fd, 0, SEEK_SET) == 0 &&
+            GestaltWriteAll(fd, data) &&
+            fsync(fd) == 0;
+        int writeErrno = errno;
 
-    if (!wrote) {
-        ftruncate(fd, 0);
-        lseek(fd, 0, SEEK_SET);
-        GestaltWriteAll(fd, original);
-        fsync(fd);
+        if (!wrote) {
+            ftruncate(fd, 0);
+            lseek(fd, 0, SEEK_SET);
+            GestaltWriteAll(fd, original);
+            fsync(fd);
+            close(fd);
+            if (error) *error = GestaltError(10,
+                [NSString stringWithFormat:@"Failed to write the plist (errno=%d).", writeErrno]);
+            return NO;
+        }
         close(fd);
-        if (error) *error = GestaltError(10,
-            [NSString stringWithFormat:@"Failed to write the plist (errno=%d).", writeErrno]);
-        return NO;
+    } else {
+        NSString *directory = [targetPath stringByDeletingLastPathComponent];
+        NSString *tempPath = [NSString stringWithFormat:@"%@/.%@.%@.tmp",
+            directory, [targetPath lastPathComponent], [NSUUID UUID].UUIDString];
+
+        NSError *tempError = nil;
+        if (![data writeToFile:tempPath
+                       options:NSDataWritingWithoutOverwriting
+                         error:&tempError]) {
+            if (error) *error = tempError ?: GestaltError(10,
+                @"Failed to write the temporary plist.");
+            return NO;
+        }
+
+        NSError *replaceError = nil;
+        if (![[NSFileManager defaultManager] replaceItemAtURL:
+                [NSURL fileURLWithPath:targetPath]
+                                                withItemAtURL:
+                [NSURL fileURLWithPath:tempPath]
+                                               backupItemName:nil
+                                                      options:0
+                                             resultingItemURL:NULL
+                                                        error:&replaceError]) {
+            [[NSFileManager defaultManager] removeItemAtPath:tempPath error:NULL];
+            if (error) *error = replaceError ?: GestaltError(10,
+                @"Failed to replace the plist.");
+            return NO;
+        }
+        [[NSFileManager defaultManager] removeItemAtPath:tempPath error:NULL];
     }
-    close(fd);
 
     NSData *verification = [NSData dataWithContentsOfFile:targetPath];
     if (![verification isEqualToData:data]) {

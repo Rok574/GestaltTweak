@@ -1,18 +1,24 @@
-# GestaltTweak
+# GestaltTweak Everywhere
 
 A native SwiftUI iPhone app that uses the **bad_query** sandbox escape
-([forcequitOS/bad_query](https://github.com/forcequitOS/bad_query)) to edit
+([forcequitOS/bad_query](https://github.com/forcequitOS/bad_query)) — or the
+**cmg** container-manager method as a fallback — to edit
 `com.apple.MobileGestalt.plist` **on your own device** — no Mac, no tethering.
 
 It reads your live MobileGestalt file, lets you toggle capability tweaks
 (Dynamic Island, Always-On Display, boot chime, charge limit, etc.), change
 the device subtype / model name, edit any raw field, and back up / restore.
 
+UI is modeled after [rooootdev/mond](https://github.com/rooootdev/mond): a
+clean sectioned list, an Advanced field editor, a Backups & Restore screen,
+and a Settings sheet with the exploit method picker, **Persist after reboot**
+toggle, respring tool, and credits.
+
 > **WARNING — use at your own risk.**
 > This uses private APIs and modifies a system cache file. Incorrect values can
 > break system features, soft-brick the UI, or bootloop the device. Only use it
 > on a device you own. A backup is always created before a write, and the
-> Restore tab can bring the original file back.
+> Backups & Restore screen can bring the original file back.
 
 ## Supported versions
 
@@ -71,13 +77,17 @@ Open the green run, scroll to **Artifacts**, and download
 
 ### 5. Run it
 
-Open GestaltTweak. If your iOS is supported it connects automatically (you'll
-see "Connected"), then:
+Open **GestaltTweak Everywhere**. If your iOS is supported it connects
+automatically (you'll see "Connected"), then:
 
-- **Tools** tab — toggle tweaks / Dynamic Island subtype / model name, then
-  tap **Apply**. The app backs up first, writes, verifies, and resprings.
-- **Fields** tab — inspect or edit any key in `CacheExtra` or top level.
-- **Restore** tab — export, import, restore, or delete backups.
+- **Tweaks** — open MobileGestalt to toggle tweaks / Dynamic Island subtype /
+  model name, then tap **Apply**. The app backs up first, writes, verifies,
+  and resprings.
+- **Settings (gear)** — pick the exploit method (**bad_query** or **cmg**,
+  with a Run Exploit button), toggle **Persist after reboot**, respring, and
+  find credits.
+- **Advanced** — inspect or edit any key in `CacheExtra` or top level.
+- **Backups & Restore** — export, import, restore, or delete backups.
 
 Some tweaks need a full reboot to take effect; the app tells you which.
 
@@ -95,16 +105,19 @@ Some tweaks need a full reboot to take effect; the app tells you which.
 
 ```
 GestaltTweak/
+  Assets.xcassets        App icon + accent color
+  CmgExploit.swift         cmg container-manager exploit (from mond) — fallback method
   BadQueryBridge.h/.m     bad_query integration (class 13, MobileGestalt
                           SystemGroup, path traversal) — derived from
                           forcequitOS/bad_query
-  GestaltAccess.h/.m      connect / read / write / verify the plist
+  GestaltAccess.h/.m      connect (bad_query or cmg) / read / write / verify
   GestaltModels.swift     plist model + value editor helpers
   GestaltTweaks.swift     tweak catalog (keys from Nugget)
   GestaltViewModel.swift  app state
   GestaltBackupStore.swift backups
   NeoSpringView.swift     WebKit respring (neospring)
-  ContentView.swift       UI
+  ContentView.swift       mond-style main list
+  SettingsView.swift      exploit method, persist toggle, respring, credits
 GestaltTweak.xcodeproj    Xcode project (build config mirroring GestaltEdit)
 .github/workflows/        builds the unsigned IPA on GitHub macOS runners
 ```
