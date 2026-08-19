@@ -202,6 +202,10 @@ final class GestaltViewModel: ObservableObject {
             return
         }
         if posterFiles.contains(url) { return }
+        guard posterFiles.count < 5 else {
+            print("(pb) session limit reached: up to 5 packs per session")
+            return
+        }
         _ = url.startAccessingSecurityScopedResource()
         posterFiles.append(url)
     }
@@ -392,7 +396,7 @@ final class GestaltViewModel: ObservableObject {
         guard let snapshot = GestaltBackupStore.loadStockSnapshot() else {
             notice = GestaltNotice(
                 kind: .error,
-                message: "No stock snapshot is available to revert to. Reopen the app once to capture one."
+                message: "No stock snapshot is available to revert to. The snapshot is captured the first time the MobileGestalt plist loads successfully, so reopen the app after running the exploit once."
             )
             return
         }
@@ -592,10 +596,33 @@ final class GestaltViewModel: ObservableObject {
             pristineCacheExtra = snapshot["CacheExtra"] as? [String: Any]
             pristineCacheData = snapshot["CacheData"] as? Data
         } else {
-            GestaltBackupStore.saveStockSnapshot(dictionary)
-            pristineCacheExtra = dictionary["CacheExtra"] as? [String: Any]
-            pristineCacheData = dictionary["CacheData"] as? Data
+            // The device may already carry tweaks applied by another tool
+            // (Nugget, mond, ...). Clean provably tweak-only keys out of the
+            // captured snapshot so Revert Tweaks restores a true stock state
+            // instead of freezing the tweaked values in forever.
+            let clean = Self.cleanedBaseline(from: dictionary)
+            GestaltBackupStore.saveStockSnapshot(clean)
+            pristineCacheExtra = clean["CacheExtra"] as? [String: Any]
+            pristineCacheData = clean["CacheData"] as? Data
         }
+    }
+
+    /// Removes keys that never ship on stock devices from a possibly-tweaked
+    /// plist. Keys that legitimately ship on some hardware (Face ID, the
+    /// Dynamic Island subtype, charge limit, camera control, ...) are left
+    /// untouched: removing them could break hardware features.
+    private static func cleanedBaseline(from dictionary: [String: Any]) -> [String: Any] {
+        guard var cacheExtra = dictionary["CacheExtra"] as? [String: Any] else {
+            return dictionary
+        }
+        for definition in GestaltTweakCatalog.definitions where definition.isTweakOnly {
+            for key in definition.values.keys {
+                cacheExtra.removeValue(forKey: key)
+            }
+        }
+        var cleaned = dictionary
+        cleaned["CacheExtra"] = cacheExtra
+        return cleaned
     }
 
     private func restoreRegionKeys(in pending: inout GestaltPlist) {

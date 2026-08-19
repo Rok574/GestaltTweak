@@ -134,15 +134,6 @@ static NSData *GestaltReadAll(int fd)
     return method.length > 0 ? method : @"bad_query";
 }
 
-/// Whether the current plist writes should be done in-place on the same inode.
-/// Mirrors mond's "Persist after reboot" toggle: ON (default) writes in-place
-/// to try to survive a reboot; OFF uses atomic file replacement instead.
-+ (BOOL)writesInPlace
-{
-    NSNumber *setting = [[NSUserDefaults standardUserDefaults] objectForKey:@"atomic_write"];
-    return setting ? setting.boolValue : YES;
-}
-
 #pragma mark - Connection
 
 - (BOOL)connectWithError:(NSError **)error
@@ -321,82 +312,49 @@ static NSData *GestaltReadAll(int fd)
     }
 }
 
-/// The in-place / atomic write itself, including rollback and verification.
+/// The in-place write itself, including rollback and verification. The file
+/// is rewritten on the same inode: atomic file replacement would swap the
+/// inode, which SpringBoard ignores because it tracks the original one, and
+/// creating a temp file in the shared SystemGroup directory is not covered by
+/// the bad_query lease.
 - (BOOL)writeData:(NSData *)data
      overOriginal:(NSData *)original
            atPath:(NSString *)targetPath
             error:(NSError **)error
 {
-    if (GestaltAccess.writesInPlace) {
-        int fd = open(targetPath.fileSystemRepresentation,
-                      O_RDWR | O_CLOEXEC | O_NOFOLLOW);
-        if (fd < 0) {
-            if (error) *error = GestaltError(9,
-                [NSString stringWithFormat:@"Failed to open the plist (errno=%d).", errno]);
-            return NO;
-        }
-
-        BOOL wrote = ftruncate(fd, 0) == 0 &&
-            lseek(fd, 0, SEEK_SET) == 0 &&
-            GestaltWriteAll(fd, data) &&
-            fsync(fd) == 0;
-        int writeErrno = errno;
-
-        BOOL verified = NO;
-        if (wrote && lseek(fd, 0, SEEK_SET) >= 0) {
-            NSData *readback = GestaltReadAll(fd);
-            verified = readback != nil && [readback isEqualToData:data];
-        }
-
-        if (!wrote || !verified) {
-            ftruncate(fd, 0);
-            lseek(fd, 0, SEEK_SET);
-            GestaltWriteAll(fd, original);
-            fsync(fd);
-            close(fd);
-            if (error) *error = GestaltError(verified ? 10 : 11,
-                verified
-                    ? [NSString stringWithFormat:@"Failed to write the plist (errno=%d).", writeErrno]
-                    : @"Post-write verification failed.");
-            return NO;
-        }
-        close(fd);
-    } else {
-        NSString *directory = [targetPath stringByDeletingLastPathComponent];
-        NSString *tempPath = [NSString stringWithFormat:@"%@/.%@.%@.tmp",
-            directory, [targetPath lastPathComponent], [NSUUID UUID].UUIDString];
-
-        NSError *tempError = nil;
-        if (![data writeToFile:tempPath
-                       options:NSDataWritingWithoutOverwriting
-                         error:&tempError]) {
-            if (error) *error = tempError ?: GestaltError(10,
-                @"Failed to write the temporary plist.");
-            return NO;
-        }
-
-        NSError *replaceError = nil;
-        if (![[NSFileManager defaultManager] replaceItemAtURL:
-                [NSURL fileURLWithPath:targetPath]
-                                                withItemAtURL:
-                [NSURL fileURLWithPath:tempPath]
-                                               backupItemName:nil
-                                                      options:0
-                                             resultingItemURL:NULL
-                                                        error:&replaceError]) {
-            [[NSFileManager defaultManager] removeItemAtPath:tempPath error:NULL];
-            if (error) *error = replaceError ?: GestaltError(10,
-                @"Failed to replace the plist.");
-            return NO;
-        }
-        [[NSFileManager defaultManager] removeItemAtPath:tempPath error:NULL];
-
-        NSData *verification = [NSData dataWithContentsOfFile:targetPath];
-        if (![verification isEqualToData:data]) {
-            if (error) *error = GestaltError(11, @"Post-write verification failed.");
-            return NO;
-        }
+    int fd = open(targetPath.fileSystemRepresentation,
+                  O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) {
+        if (error) *error = GestaltError(9,
+            [NSString stringWithFormat:@"Failed to open the plist (errno=%d).", errno]);
+        return NO;
     }
+
+    BOOL wrote = ftruncate(fd, 0) == 0 &&
+        lseek(fd, 0, SEEK_SET) == 0 &&
+        GestaltWriteAll(fd, data) &&
+        fsync(fd) == 0;
+    int writeErrno = errno;
+
+    BOOL verified = NO;
+    if (wrote && lseek(fd, 0, SEEK_SET) >= 0) {
+        NSData *readback = GestaltReadAll(fd);
+        verified = readback != nil && [readback isEqualToData:data];
+    }
+
+    if (!wrote || !verified) {
+        ftruncate(fd, 0);
+        lseek(fd, 0, SEEK_SET);
+        GestaltWriteAll(fd, original);
+        fsync(fd);
+        close(fd);
+        if (error) *error = GestaltError(verified ? 10 : 11,
+            verified
+                ? [NSString stringWithFormat:@"Failed to write the plist (errno=%d).", writeErrno]
+                : @"Post-write verification failed.");
+        return NO;
+    }
+    close(fd);
 
     if (error) *error = nil;
     return YES;

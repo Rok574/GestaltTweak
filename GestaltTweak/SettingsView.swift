@@ -14,7 +14,6 @@ struct SettingsView: View {
     @EnvironmentObject private var viewModel: GestaltViewModel
 
     @AppStorage("method") private var method = "bad_query"
-    @AppStorage("atomic_write") private var persistAfterReboot = true
     @AppStorage("dismiss_after_import") private var dismissAfterImport = false
 
     @State private var showsRespringConfirmation = false
@@ -46,13 +45,11 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("Persist after reboot", isOn: $persistAfterReboot)
-
                     Toggle("Dismiss after importing", isOn: $dismissAfterImport)
                 } header: {
                     Label("Preferences", systemImage: "gear")
                 } footer: {
-                    Text("Persist after reboot rewrites MobileGestalt in-place on the same inode so iOS (hopefully) keeps the file after a restart. Turn it off to use atomic file replacement instead. Dismiss after importing closes the wallpaper explorer once a pack is saved.")
+                    Text("Dismiss after importing closes the wallpaper explorer once a pack is saved. All writes rewrite MobileGestalt in-place on the same inode so iOS keeps the file after a restart.")
                 }
 
                 Section {
@@ -122,6 +119,8 @@ struct SettingsView: View {
 }
 
 struct CreditsRow: View {
+    @Environment(\.openURL) private var openURL
+
     let name: String
     let role: String
     let profile: URL
@@ -150,7 +149,7 @@ struct CreditsRow: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            UIApplication.shared.open(profile)
+            openURL(profile)
         }
     }
 

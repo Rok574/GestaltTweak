@@ -238,19 +238,32 @@ private struct UnsupportedOSView: View {
 private struct TweakWorkbench: View {
     @EnvironmentObject private var viewModel: GestaltViewModel
     @State private var query = ""
+    @State private var showsRevertConfirmation = false
 
     var body: some View {
         List {
             if viewModel.plist != nil {
                 Section {
                     Button {
-                        viewModel.revertTweaks()
+                        showsRevertConfirmation = true
                     } label: {
                         Label("Revert Tweaks", systemImage: "arrow.uturn.backward")
                     }
                     .disabled(viewModel.isBusy)
                 } footer: {
                     Text("Restores the stock snapshot, undoing every applied tweak.")
+                }
+                .confirmationDialog(
+                    "Revert All Tweaks?",
+                    isPresented: $showsRevertConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Revert", role: .destructive) {
+                        viewModel.revertTweaks()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("The stock MobileGestalt captured on first launch will be written back and SpringBoard will refresh. This cannot be undone after the write.")
                 }
 
                 if deviceIdentityMatchesQuery {
@@ -471,23 +484,23 @@ private struct BackupLibrary: View {
                 Text("The original plist is backed up before every write.")
             }
 
-                Section("Local Backups") {
-                    if viewModel.backups.isEmpty {
-                        Label("No Backups", systemImage: "archivebox")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(viewModel.backups) { backup in
-                            BackupRow(backup: backup) {
-                                backupToRestore = backup
-                            }
+            Section("Local Backups") {
+                if viewModel.backups.isEmpty {
+                    Label("No Backups", systemImage: "archivebox")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(viewModel.backups) { backup in
+                        BackupRow(backup: backup) {
+                            backupToRestore = backup
                         }
-                        .onDelete { offsets in
-                            for index in offsets { viewModel.delete(viewModel.backups[index]) }
-                        }
+                    }
+                    .onDelete { offsets in
+                        for index in offsets { viewModel.delete(viewModel.backups[index]) }
                     }
                 }
             }
-            .navigationTitle("Backups")
+        }
+        .navigationTitle("Backups")
             .refreshable { viewModel.refreshBackups() }
             .onAppear { viewModel.refreshBackups() }
             .fileImporter(
@@ -515,7 +528,7 @@ private struct BackupLibrary: View {
                     backupToRestore = nil
                 }
                 Button("Cancel", role: .cancel) { backupToRestore = nil }
-} message: {
+            } message: {
                 Text("The current file will be backed up first. SpringBoard will refresh automatically after restoring.")
             }
     }

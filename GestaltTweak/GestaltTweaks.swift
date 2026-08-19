@@ -48,7 +48,6 @@ enum GestaltTweakID: String, CaseIterable, Identifiable {
     case collisionSOS
     case alwaysOnDisplay
     case alwaysOnDisplayVibrancy
-    case siriAI
     case pulseWidthModulation
     case highLuminanceAOD
     case hdrPhotoDisplay
@@ -85,6 +84,9 @@ struct GestaltTweakDefinition: Identifiable {
     let values: [String: Any]
     var isRisky = false
     var isLocked = false
+    /// True when the tweak's keys never ship on stock devices, so a baseline
+    /// captured from an already-tweaked device can safely remove them.
+    var isTweakOnly = false
 
     func isApplied(in cacheExtra: [String: Any]) -> Bool {
         for (key, expected) in values {
@@ -113,8 +115,6 @@ struct GestaltTweakDefinition: Identifiable {
 
 enum GestaltTweakCatalog {
     static let definitions: [GestaltTweakDefinition] = [
-        .init(id: .siriAI, category: .region, title: "Siri AI", detail: "Sets a3n5T9sFtlyQ74NEp9ESxg to 2 as an integer. Experimental. May cause boot loops.", values: ["a3n5T9sFtlyQ74NEp9ESxg": 2], isRisky: true, isLocked: true),
-
         .init(id: .supportsDynamicIsland, category: .display, title: "Enable Dynamic Island Capability", detail: "Nugget's alternate enable method.", values: ["YlEtTtHlNesRBMal1CqRaA": 1]),
         .init(id: .alwaysOnDisplay, category: .display, title: "Always-On Display", detail: "May increase burn-in risk on unsupported devices.", values: ["2OOJf1VhaM7NxfRok3HbWQ": 1, "j8/Omm6s1lsmTDFsXjsBfA": 1], isRisky: true),
         .init(id: .alwaysOnDisplayVibrancy, category: .display, title: "AOD Vibrancy", detail: "Use this when AOD rendering looks incorrect.", values: ["ykpu7qyhqFweVMKtxNylWA": 1]),
@@ -155,11 +155,11 @@ enum GestaltTweakCatalog {
 
         .init(id: .stageManager, category: .ipad, title: "Stage Manager Support", detail: "Marks the device as supporting Stage Manager.", values: ["qeaj75wk3HF4DwQ8qbIi7g": 1]),
         .init(id: .iPadApps, category: .ipad, title: "Allow iPad Apps", detail: "Enables iPad app compatibility types on iPhone.", values: ["9MZ5AdH43csAUajl/dU+IQ": [1, 2]]),
-        .init(id: .iPadOS, category: .ipad, title: "Enable iPadOS Mode", detail: "Changes five capabilities and CacheData; experimental and high risk.", values: ["mG0AnH/Vy1veoqoLRAIgTA": 1, "UCG5MkVahJxG1YULbbd5Bg": 1, "ZYqko/XM5zD3XBfN5RmaXA": 1, "nVh/gwNpy7Jv1NOk00CMrw": 1, "uKc7FPnEO++lVhHWHFlGbQ": 1], isRisky: true),
+        .init(id: .iPadOS, category: .ipad, title: "Enable iPadOS Mode", detail: "Changes five capabilities and CacheData; experimental and high risk.", values: ["mG0AnH/Vy1veoqoLRAIgTA": 1, "UCG5MkVahJxG1YULbbd5Bg": 1, "ZYqko/XM5zD3XBfN5RmaXA": 1, "nVh/gwNpy7Jv1NOk00CMrw": 1, "uKc7FPnEO++lVhHWHFlGbQ": 1], isRisky: true, isTweakOnly: true),
 
-        .init(id: .internalInstall, category: .internalFeatures, title: "Apple Internal Install", detail: "Enables internal capabilities such as Metal HUD; some services may misbehave.", values: ["EqrsVvjcYDdxHBiQmGhAWw": 1], isRisky: true),
-        .init(id: .internalStorage, category: .internalFeatures, title: "Internal Storage View", detail: "Shows internal files in Storage settings; high risk on some iPads.", values: ["LBJfwOEzExRxzlAnSuI7eg": 1], isRisky: true),
-        .init(id: .securityResearchDevice, category: .internalFeatures, title: "Security Research Device Mode", detail: "Marks the device as a Security Research Device.", values: ["XYlJKKkj2hztRP1NWWnhlw": 1], isRisky: true),
+        .init(id: .internalInstall, category: .internalFeatures, title: "Apple Internal Install", detail: "Enables internal capabilities such as Metal HUD; some services may misbehave.", values: ["EqrsVvjcYDdxHBiQmGhAWw": 1], isRisky: true, isTweakOnly: true),
+        .init(id: .internalStorage, category: .internalFeatures, title: "Internal Storage View", detail: "Shows internal files in Storage settings; high risk on some iPads.", values: ["LBJfwOEzExRxzlAnSuI7eg": 1], isRisky: true, isTweakOnly: true),
+        .init(id: .securityResearchDevice, category: .internalFeatures, title: "Security Research Device Mode", detail: "Marks the device as a Security Research Device.", values: ["XYlJKKkj2hztRP1NWWnhlw": 1], isRisky: true, isTweakOnly: true),
         .init(id: .audioMix, category: .internalFeatures, title: "Audio Mix", detail: "Enables the audio mix capability.", values: ["aVL5GE3tx0LSCI/ErfrJGA": 1])
     ]
 

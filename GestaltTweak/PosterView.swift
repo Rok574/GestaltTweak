@@ -109,50 +109,67 @@ struct PosterView: View {
     }
 
     private func apply() {
+        guard !busy else { return }
         busy = true
-        do {
-            let count = try pb.apply(at: viewModel.posterFiles)
-            print("(pb) applied \(count) descriptor(s).")
-            busy = false
-            alert = PosterAlert(
-                title: "Successfully applied PosterBoard!",
-                message: "For changes to take effect:\n1. Click 'Open' to launch Posterboard\n2. Close it from the App Switcher",
-                actionLabel: "Open",
-                action: {
-                    openPosterBoard()
+        let files = viewModel.posterFiles
+
+        Task.detached(priority: .userInitiated) {
+            do {
+                let count = try pb.apply(at: files)
+                print("(pb) applied \(count) descriptor(s).")
+                await MainActor.run {
+                    self.busy = false
+                    self.alert = PosterAlert(
+                        title: "Successfully applied PosterBoard!",
+                        message: "For changes to take effect:\n1. Click 'Open' to launch Posterboard\n2. Close it from the App Switcher",
+                        actionLabel: "Open",
+                        action: {
+                            self.openPosterBoard()
+                        }
+                    )
                 }
-            )
-        } catch {
-            print("(pb) failed: \(error.localizedDescription)\n")
-            busy = false
-            alert = PosterAlert(
-                title: "Failed to apply PosterBoard!",
-                message: "Restart the app and try again. Check logs for more detailed information."
-            )
+            } catch {
+                print("(pb) failed: \(error.localizedDescription)\n")
+                await MainActor.run {
+                    self.busy = false
+                    self.alert = PosterAlert(
+                        title: "Failed to apply PosterBoard!",
+                        message: "Restart the app and try again."
+                    )
+                }
+            }
         }
     }
 
     private func reset() {
+        guard !busy else { return }
         busy = true
-        do {
-            try pb.reset()
-            print("(pb) reset done.")
-            busy = false
-            alert = PosterAlert(
-                title: "Successfully reverted PosterBoard!",
-                message: "Respring your device for changes to take effect.",
-                actionLabel: "Respring",
-                action: {
-                    viewModel.respring()
+
+        Task.detached(priority: .userInitiated) {
+            do {
+                try pb.reset()
+                print("(pb) reset done.")
+                await MainActor.run {
+                    self.busy = false
+                    self.alert = PosterAlert(
+                        title: "Successfully reverted PosterBoard!",
+                        message: "Respring your device for changes to take effect.",
+                        actionLabel: "Respring",
+                        action: {
+                            self.viewModel.respring()
+                        }
+                    )
                 }
-            )
-        } catch {
-            print("(pb) failed: \(error.localizedDescription)")
-            busy = false
-            alert = PosterAlert(
-                title: "Failed to revert PosterBoard!",
-                message: "Restart the app and try again. Check logs for more detailed information."
-            )
+            } catch {
+                print("(pb) failed: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.busy = false
+                    self.alert = PosterAlert(
+                        title: "Failed to revert PosterBoard!",
+                        message: "Restart the app and try again."
+                    )
+                }
+            }
         }
     }
 
