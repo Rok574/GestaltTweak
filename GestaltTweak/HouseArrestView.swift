@@ -2,12 +2,33 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct HouseArrestView: View {
+    @StateObject private var cache = HouseArrestCache()
+
     var body: some View {
         NavigationStack { HouseArrestDirectoryView(directory: HouseArrestService.applicationsRoot, title: "HouseArrest") }
+            .environmentObject(cache)
+    }
+}
+
+@MainActor
+private final class HouseArrestCache: ObservableObject {
+    private var listings: [String: [HouseArrestItem]] = [:]
+
+    func listing(for directory: URL) -> [HouseArrestItem]? {
+        listings[directory.standardizedFileURL.path]
+    }
+
+    func store(_ items: [HouseArrestItem], for directory: URL) {
+        listings[directory.standardizedFileURL.path] = items
+    }
+
+    func invalidate(_ directory: URL) {
+        listings.removeValue(forKey: directory.standardizedFileURL.path)
     }
 }
 
 private struct HouseArrestDirectoryView: View {
+    @EnvironmentObject private var cache: HouseArrestCache
     let directory: URL
     let title: String
     @State private var items: [HouseArrestItem] = []
@@ -57,11 +78,15 @@ private struct HouseArrestDirectoryView: View {
             }
         }
         .task { load() }
-        .refreshable { load() }
+        .refreshable { load(forceRefresh: true) }
         .fileImporter(isPresented: $importPresented, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls):
-                do { for url in urls { _ = try HouseArrestService.importFile(from: url, to: directory) }; load() }
+                do {
+                    for url in urls { _ = try HouseArrestService.importFile(from: url, to: directory) }
+                    cache.invalidate(directory)
+                    load()
+                }
                 catch { errorMessage = error.localizedDescription }
             case .failure(let error): errorMessage = error.localizedDescription
             }
@@ -69,7 +94,7 @@ private struct HouseArrestDirectoryView: View {
         .confirmationDialog("Delete this file?", isPresented: Binding(get: { itemToDelete != nil }, set: { if !$0 { itemToDelete = nil } }), titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let itemToDelete {
-                    do { try HouseArrestService.delete(itemToDelete); load() }
+                    do { try HouseArrestService.delete(itemToDelete); cache.invalidate(directory); load() }
                     catch { errorMessage = error.localizedDescription }
                 }
                 self.itemToDelete = nil
@@ -88,7 +113,7 @@ private struct HouseArrestDirectoryView: View {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { itemToRename = nil } }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Rename") {
-                            do { try HouseArrestService.rename(item, to: renameText); itemToRename = nil; load() }
+                            do { try HouseArrestService.rename(item, to: renameText); itemToRename = nil; cache.invalidate(directory); load() }
                             catch { errorMessage = error.localizedDescription }
                         }
                         .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -120,11 +145,23 @@ private struct HouseArrestDirectoryView: View {
         itemToRename = item
     }
 
-    private func load() {
+    private func load(forceRefresh: Bool = false) {
         isLoading = true
         let directory = directory
+        if !forceRefresh, let cached = cache.listing(for: directory) {
+            items = cached
+            isLoading = false
+            return
+        }
         Task.detached(priority: .userInitiated) {
-            do { let result = try HouseArrestService.list(directory); await MainActor.run { items = result; isLoading = false } }
+            do {
+                let result = try HouseArrestService.list(directory)
+                await MainActor.run {
+                    cache.store(result, for: directory)
+                    items = result
+                    isLoading = false
+                }
+            }
             catch { await MainActor.run { errorMessage = error.localizedDescription; isLoading = false } }
         }
     }
