@@ -1,0 +1,191 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+struct HouseArrestView: View {
+    var body: some View {
+        NavigationStack { HouseArrestDirectoryView(directory: HouseArrestService.applicationsRoot, title: "App Containers") }
+    }
+}
+
+private struct HouseArrestDirectoryView: View {
+    let directory: URL
+    let title: String
+    @State private var items: [HouseArrestItem] = []
+    @State private var query = ""
+    @State private var isLoading = true
+    @State private var importPresented = false
+    @State private var errorMessage: String?
+    @State private var itemToDelete: HouseArrestItem?
+    @State private var itemToRename: HouseArrestItem?
+    @State private var renameText = ""
+
+    private var visibleItems: [HouseArrestItem] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? items : items.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
+    }
+
+    var body: some View {
+        Group {
+            if isLoading { ProgressView("Loading files...") }
+            else if visibleItems.isEmpty { ContentUnavailableView(query.isEmpty ? "Folder is empty" : "No matching files", systemImage: "folder") }
+            else {
+                List {
+                    ForEach(visibleItems) { item in
+                        if item.isDirectory {
+                            NavigationLink { HouseArrestDirectoryView(directory: item.url, title: item.name) } label: { itemRow(item) }
+                                .contextMenu { renameButton(for: item) }
+                        } else {
+                            NavigationLink { HouseArrestFileView(item: item) } label: { itemRow(item) }
+                                .contextMenu { renameButton(for: item) }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button { beginRename(item) } label: { Label("Rename", systemImage: "pencil") }
+                                    Button(role: .destructive) { itemToDelete = item } label: { Label("Delete", systemImage: "trash") }
+                                }
+                        }
+                    }
+                }.listStyle(.insetGrouped)
+            }
+        }
+        .navigationTitle(title)
+        .searchable(text: $query, prompt: "Search files")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { importPresented = true } label: { Image(systemName: "square.and.arrow.down") }.accessibilityLabel("Import file")
+            }
+        }
+        .task { load() }
+        .refreshable { load() }
+        .fileImporter(isPresented: $importPresented, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in
+            switch result {
+            case .success(let urls):
+                do { for url in urls { _ = try HouseArrestService.importFile(from: url, to: directory) }; load() }
+                catch { errorMessage = error.localizedDescription }
+            case .failure(let error): errorMessage = error.localizedDescription
+            }
+        }
+        .confirmationDialog("Delete this file?", isPresented: Binding(get: { itemToDelete != nil }, set: { if !$0 { itemToDelete = nil } }), titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let itemToDelete {
+                    do { try HouseArrestService.delete(itemToDelete); load() }
+                    catch { errorMessage = error.localizedDescription }
+                }
+                self.itemToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { itemToDelete = nil }
+        }
+        .sheet(item: $itemToRename) { item in
+            NavigationStack {
+                Form {
+                    TextField("Name", text: $renameText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+                .navigationTitle("Rename Item")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { itemToRename = nil } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Rename") {
+                            do { try HouseArrestService.rename(item, to: renameText); itemToRename = nil; load() }
+                            catch { errorMessage = error.localizedDescription }
+                        }
+                        .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.height(180)])
+        }
+        .alert("File Browser Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(errorMessage ?? "") }
+    }
+
+    private func itemRow(_ item: HouseArrestItem) -> some View {
+        Label { Text(item.name).lineLimit(1) } icon: { Image(systemName: item.iconName).foregroundStyle(item.isDirectory ? Color.accentColor : .secondary) }
+    }
+
+    @ViewBuilder
+    private func renameButton(for item: HouseArrestItem) -> some View {
+        Button { beginRename(item) } label: { Label("Rename", systemImage: "pencil") }
+    }
+
+    private func beginRename(_ item: HouseArrestItem) {
+        renameText = item.name
+        itemToRename = item
+    }
+
+    private func load() {
+        isLoading = true
+        let directory = directory
+        Task.detached(priority: .userInitiated) {
+            do { let result = try HouseArrestService.list(directory); await MainActor.run { items = result; isLoading = false } }
+            catch { await MainActor.run { errorMessage = error.localizedDescription; isLoading = false } }
+        }
+    }
+}
+
+private struct HouseArrestFileView: View {
+    let item: HouseArrestItem
+    @State private var text = ""
+    @State private var editing = false
+    @State private var plistFormat: PropertyListSerialization.PropertyListFormat?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        Group {
+            if editing { TextEditor(text: $text).font(.system(size: 13, design: .monospaced)) }
+            else { ScrollView { Text(text).font(.system(size: 13, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding() } }
+        }
+        .navigationTitle(item.name)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if editing {
+                    Button("Cancel") { editing = false }
+                    Button("Save") { save() }
+                } else if HouseArrestService.isEditable(item.url) {
+                    Button { beginEditing() } label: { Image(systemName: "square.and.pencil") }.accessibilityLabel("Edit file")
+                }
+                ShareLink(item: item.url) { Image(systemName: "square.and.arrow.up") }
+            }
+        }
+        .task { load() }
+        .alert("File Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(errorMessage ?? "") }
+    }
+
+    private func load() { do { text = try decode(HouseArrestService.read(item.url)) } catch { errorMessage = error.localizedDescription } }
+    private func beginEditing() { do { text = try decode(HouseArrestService.read(item.url)); editing = true } catch { errorMessage = error.localizedDescription } }
+
+    private func decode(_ data: Data) throws -> String {
+        if item.url.pathExtension.lowercased() == "plist" {
+            var format = PropertyListSerialization.PropertyListFormat.xml
+            let object = try PropertyListSerialization.propertyList(from: data, options: [], format: &format)
+            plistFormat = format
+            if JSONSerialization.isValidJSONObject(object),
+               let json = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) {
+                return String(decoding: json, as: UTF8.self)
+            }
+            let xml = try PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0)
+            return String(decoding: xml, as: UTF8.self)
+        }
+        guard let value = String(data: data, encoding: .utf8) else { throw HouseArrestError.accessDenied("Unsupported binary file") }
+        return value
+    }
+
+    private func save() {
+        do {
+            let data: Data
+            if let format = plistFormat {
+                let edited = Data(text.utf8)
+                let object = (try? JSONSerialization.jsonObject(with: edited))
+                    ?? (try PropertyListSerialization.propertyList(from: edited, options: [], format: nil))
+                data = try PropertyListSerialization.data(fromPropertyList: object, format: format, options: 0)
+            } else {
+                guard let encoded = text.data(using: .utf8) else { throw HouseArrestError.accessDenied("Could not encode text") }
+                data = encoded
+            }
+            try HouseArrestService.write(data, to: item.url)
+            editing = false
+        } catch { errorMessage = error.localizedDescription }
+    }
+}

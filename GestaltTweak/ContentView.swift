@@ -66,6 +66,16 @@ struct ContentView: View {
                                     subtitle: "Drop in wallpaper packs"
                                 )
                             }
+                            NavigationLink {
+                                HouseArrestView()
+                            } label: {
+                                moduleRow(
+                                    icon: "folder.badge.gearshape",
+                                    tint: .teal,
+                                    title: "App Files",
+                                    subtitle: "Import, edit, and delete supported files"
+                                )
+                            }
                         }
                         .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
 
