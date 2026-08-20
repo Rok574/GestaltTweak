@@ -219,12 +219,8 @@ BOOL GTLaunchApplication(NSString *bundleID)
     id workspace = ((id (*)(id, SEL))objc_msgSend)(workspaceClass, defaultSelector);
     if (!workspace) return NO;
 
-    SEL proxySelector = NSSelectorFromString(@"applicationProxyForBundleIdentifier:");
-    if (![workspace respondsToSelector:proxySelector]) return NO;
-    id proxy = ((id (*)(id, SEL, NSString *))objc_msgSend)(workspace, proxySelector, bundleID);
-    if (!proxy) return NO;
-
     SEL openSelector = NSSelectorFromString(@"openApplicationWithBundleID:");
     if (![workspace respondsToSelector:openSelector]) return NO;
-    return ((BOOL (*)(id, SEL, NSString *))objc_msgSend)(workspace, openSelector, bundleID);
+    [workspace performSelector:openSelector withObject:bundleID];
+    return YES;
 }
