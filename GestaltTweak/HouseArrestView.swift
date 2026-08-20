@@ -153,16 +153,18 @@ private struct HouseArrestDirectoryView: View {
             isLoading = false
             return
         }
-        Task.detached(priority: .userInitiated) {
+        Task { @MainActor in
             do {
-                let result = try HouseArrestService.list(directory)
-                await MainActor.run {
-                    cache.store(result, for: directory)
-                    items = result
-                    isLoading = false
-                }
+                let result = try await Task.detached(priority: .userInitiated) {
+                    try HouseArrestService.list(directory)
+                }.value
+                cache.store(result, for: directory)
+                items = result
+                isLoading = false
+            } catch {
+                errorMessage = error.localizedDescription
+                isLoading = false
             }
-            catch { await MainActor.run { errorMessage = error.localizedDescription; isLoading = false } }
         }
     }
 }
