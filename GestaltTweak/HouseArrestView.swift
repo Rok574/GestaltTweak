@@ -206,7 +206,7 @@ private struct HouseArrestFileView: View {
                 if editing {
                     Button("Cancel") { editing = false }
                     Button("Save") { save() }
-                } else if HouseArrestService.isEditable(item.url) {
+                } else if !item.isDirectory {
                     Button { beginEditing() } label: { Image(systemName: "square.and.pencil") }.accessibilityLabel("Edit file")
                 }
                 Button { prepareExport() } label: { Image(systemName: "folder.badge.plus") }
