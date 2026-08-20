@@ -221,15 +221,16 @@ struct ContentView: View {
                 .frame(width: 34, height: 34)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(tint)
+                        .fill(.indigo)
                 )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body)
+                    .foregroundStyle(.white)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
@@ -520,6 +521,8 @@ private struct BackupLibrary: View {
             }
         }
         .navigationTitle("Backups")
+            .foregroundStyle(.white)
+            .tint(.indigo)
             .refreshable { viewModel.refreshBackups() }
             .onAppear { viewModel.refreshBackups() }
             .fileImporter(

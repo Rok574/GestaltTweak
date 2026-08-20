@@ -85,6 +85,7 @@ struct PosterView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
+        .foregroundStyle(.white)
         .tint(.indigo)
         .sheet(isPresented: $show_explorer) {
             TendiesView()
