@@ -33,8 +33,10 @@ struct PosterView: View {
                         }
                         .foregroundStyle(.indigo)
                     } else {
-                        Label("Apply", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.indigo)
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.indigo)
+                            Text("Apply").foregroundStyle(.white)
+                        }
                     }
                 }
                 .disabled(viewModel.posterFiles.isEmpty || busy)
@@ -42,7 +44,10 @@ struct PosterView: View {
                 Button {
                     reset()
                 } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise").foregroundStyle(.indigo)
+                        Text("Reset").foregroundStyle(.white)
+                    }
                 }
                 .disabled(busy)
             } footer: {
@@ -53,14 +58,20 @@ struct PosterView: View {
                 Button {
                     show_importer = true
                 } label: {
-                    Label("Import Tendies", systemImage: "square.and.arrow.down")
+                    HStack {
+                        Image(systemName: "square.and.arrow.down").foregroundStyle(.indigo)
+                        Text("Import Tendies").foregroundStyle(.white)
+                    }
                 }
                 .disabled(busy)
 
                 Button {
                     show_explorer = true
                 } label: {
-                    Label("Explore Tendies", systemImage: "sparkles")
+                    HStack {
+                        Image(systemName: "sparkles").foregroundStyle(.indigo)
+                        Text("Explore Tendies").foregroundStyle(.white)
+                    }
                 }
                 .disabled(busy)
             } footer: {
@@ -70,13 +81,19 @@ struct PosterView: View {
             if !viewModel.posterFiles.isEmpty {
                 Section {
                     ForEach(viewModel.posterFiles, id: \.self) { url in
-                        Text(url.lastPathComponent)
+                        HStack {
+                            Image(systemName: "doc").foregroundStyle(.indigo)
+                            Text(url.lastPathComponent).foregroundStyle(.white)
+                        }
                     }
                     .onDelete { offsets in
                         viewModel.removePosterFiles(at: offsets)
                     }
                 } header: {
-                    Label("Imported", systemImage: "document.on.document")
+                    HStack {
+                        Image(systemName: "document.on.document").foregroundStyle(.indigo)
+                        Text("Imported")
+                    }
                 }
             }
         }

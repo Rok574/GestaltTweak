@@ -221,7 +221,7 @@ struct ContentView: View {
                 .frame(width: 34, height: 34)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.indigo)
+                        .fill(tint)
                 )
 
             VStack(alignment: .leading, spacing: 2) {
@@ -490,14 +490,20 @@ private struct BackupLibrary: View {
                 Button {
                     viewModel.createBackup()
                 } label: {
-                    Label("Back Up Current MobileGestalt", systemImage: "plus.circle.fill")
+                    HStack {
+                        Image(systemName: "plus.circle.fill").foregroundStyle(.indigo)
+                        Text("Back Up Current MobileGestalt").foregroundStyle(.white)
+                    }
                 }
                 .disabled(viewModel.plist == nil || viewModel.isBusy)
 
                 Button {
                     showsBackupImporter = true
                 } label: {
-                    Label("Import Backup", systemImage: "square.and.arrow.down")
+                    HStack {
+                        Image(systemName: "square.and.arrow.down").foregroundStyle(.indigo)
+                        Text("Import Backup").foregroundStyle(.white)
+                    }
                 }
                 .disabled(viewModel.isBusy)
             } footer: {
@@ -506,8 +512,10 @@ private struct BackupLibrary: View {
 
             Section("Local Backups") {
                 if viewModel.backups.isEmpty {
-                    Label("No Backups", systemImage: "archivebox")
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Image(systemName: "archivebox").foregroundStyle(.indigo)
+                        Text("No Backups").foregroundStyle(.white.opacity(0.72))
+                    }
                 } else {
                     ForEach(viewModel.backups) { backup in
                         BackupRow(backup: backup) {
@@ -571,6 +579,7 @@ private struct BackupRow: View {
             Spacer()
             ShareLink(item: backup.url) {
                 Image(systemName: "square.and.arrow.up")
+                    .foregroundStyle(.indigo)
             }
             .accessibilityLabel("Export Backup")
             Button("Restore", action: restore)
