@@ -227,10 +227,10 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
@@ -492,7 +492,7 @@ private struct BackupLibrary: View {
                 } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill").foregroundStyle(.indigo)
-                        Text("Back Up Current MobileGestalt").foregroundStyle(.white)
+                        Text("Back Up Current MobileGestalt").foregroundStyle(.primary)
                     }
                 }
                 .disabled(viewModel.plist == nil || viewModel.isBusy)
@@ -502,7 +502,7 @@ private struct BackupLibrary: View {
                 } label: {
                     HStack {
                         Image(systemName: "square.and.arrow.down").foregroundStyle(.indigo)
-                        Text("Import Backup").foregroundStyle(.white)
+                        Text("Import Backup").foregroundStyle(.primary)
                     }
                 }
                 .disabled(viewModel.isBusy)
@@ -514,7 +514,7 @@ private struct BackupLibrary: View {
                 if viewModel.backups.isEmpty {
                     HStack {
                         Image(systemName: "archivebox").foregroundStyle(.indigo)
-                        Text("No Backups").foregroundStyle(.white.opacity(0.72))
+                        Text("No Backups").foregroundStyle(.secondary)
                     }
                 } else {
                     ForEach(viewModel.backups) { backup in
@@ -529,7 +529,7 @@ private struct BackupLibrary: View {
             }
         }
         .navigationTitle("Backups")
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .tint(.indigo)
             .refreshable { viewModel.refreshBackups() }
             .onAppear { viewModel.refreshBackups() }

@@ -35,7 +35,7 @@ struct PosterView: View {
                     } else {
                         HStack {
                             Image(systemName: "checkmark.circle.fill").foregroundStyle(.indigo)
-                            Text("Apply").foregroundStyle(.white)
+                            Text("Apply").foregroundStyle(.primary)
                         }
                     }
                 }
@@ -46,7 +46,7 @@ struct PosterView: View {
                 } label: {
                     HStack {
                         Image(systemName: "arrow.counterclockwise").foregroundStyle(.indigo)
-                        Text("Reset").foregroundStyle(.white)
+                        Text("Reset").foregroundStyle(.primary)
                     }
                 }
                 .disabled(busy)
@@ -60,7 +60,7 @@ struct PosterView: View {
                 } label: {
                     HStack {
                         Image(systemName: "square.and.arrow.down").foregroundStyle(.indigo)
-                        Text("Import Tendies").foregroundStyle(.white)
+                        Text("Import Tendies").foregroundStyle(.primary)
                     }
                 }
                 .disabled(busy)
@@ -70,7 +70,7 @@ struct PosterView: View {
                 } label: {
                     HStack {
                         Image(systemName: "sparkles").foregroundStyle(.indigo)
-                        Text("Explore Tendies").foregroundStyle(.white)
+                        Text("Explore Tendies").foregroundStyle(.primary)
                     }
                 }
                 .disabled(busy)
@@ -83,7 +83,7 @@ struct PosterView: View {
                     ForEach(viewModel.posterFiles, id: \.self) { url in
                         HStack {
                             Image(systemName: "doc").foregroundStyle(.indigo)
-                            Text(url.lastPathComponent).foregroundStyle(.white)
+                            Text(url.lastPathComponent).foregroundStyle(.primary)
                         }
                     }
                     .onDelete { offsets in
@@ -102,7 +102,7 @@ struct PosterView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color(.systemGroupedBackground))
-        .foregroundStyle(.white)
+        .foregroundStyle(.primary)
         .tint(.indigo)
         .sheet(isPresented: $show_explorer) {
             TendiesView()
