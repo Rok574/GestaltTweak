@@ -33,6 +33,10 @@ struct HouseArrestItem: Identifiable, Hashable, Sendable {
 
 enum HouseArrestService {
     nonisolated static let applicationsRoot = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application", isDirectory: true)
+    nonisolated static let maxPreviewBytes = 8 * 1024 * 1024
+
+    private static let bundleIDCacheLock = NSLock()
+    nonisolated(unsafe) private static var bundleIDCache: [String: String] = [:]
 
     nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
         let isApplicationsRoot = directory.standardizedFileURL.path == applicationsRoot.path
@@ -75,6 +79,10 @@ enum HouseArrestService {
         let lease = try acquire(url.path)
         defer { lease.invalidate() }
         return try Data(contentsOf: url, options: .mappedIfSafe)
+    }
+
+    nonisolated static func fileSize(_ url: URL) -> Int? {
+        (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
     }
 
     nonisolated static func write(_ data: Data, to url: URL) throws {
@@ -136,17 +144,32 @@ enum HouseArrestService {
     }
 
     private nonisolated static func bundleIdentifier(for container: URL) -> String? {
+        let key = container.standardizedFileURL.path
+
+        bundleIDCacheLock.lock()
+        if let cached = bundleIDCache[key] {
+            bundleIDCacheLock.unlock()
+            return cached
+        }
+        bundleIDCacheLock.unlock()
+
         let metadataURLs = [
             container.appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist"),
             container.appendingPathComponent("com.apple.mobile_container_manager.metadata.plist")
         ]
         for metadata in metadataURLs {
             if let data = try? Data(contentsOf: metadata), let identifier = metadataIdentifier(from: data) {
+                bundleIDCacheLock.lock()
+                bundleIDCache[key] = identifier
+                bundleIDCacheLock.unlock()
                 return identifier
             }
         }
         for metadata in metadataURLs {
             if let data = try? read(metadata), let identifier = metadataIdentifier(from: data) {
+                bundleIDCacheLock.lock()
+                bundleIDCache[key] = identifier
+                bundleIDCacheLock.unlock()
                 return identifier
             }
         }
@@ -170,6 +193,7 @@ enum HouseArrestError: LocalizedError, Sendable {
     case invalidFileName
     case fileAlreadyExists
     case deleteFailed
+    case fileTooLarge(Int)
 
     var errorDescription: String? {
         switch self {
@@ -178,6 +202,7 @@ enum HouseArrestError: LocalizedError, Sendable {
         case .invalidFileName: "Enter a valid name without path separators."
         case .fileAlreadyExists: "An item with that name already exists in this folder."
         case .deleteFailed: "The file could not be deleted. Please try again."
+        case .fileTooLarge(let bytes): "File is too large to preview (\(bytes) bytes). Use Save to Files to export it instead."
         }
     }
 }

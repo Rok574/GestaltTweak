@@ -86,19 +86,22 @@ private struct HouseArrestDirectoryView: View {
         .fileImporter(isPresented: $importPresented, allowedContentTypes: [.data], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls):
-                do {
-                    for url in urls { _ = try HouseArrestService.importFile(from: url, to: directory) }
-                    cache.invalidate(directory)
-                    load()
+                Task {
+                    do {
+                        try await Self.importFiles(urls, to: directory)
+                        cache.invalidate(directory)
+                        load(forceRefresh: true)
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
                 }
-                catch { errorMessage = error.localizedDescription }
             case .failure(let error): errorMessage = error.localizedDescription
             }
         }
         .confirmationDialog("Delete this file?", isPresented: Binding(get: { itemToDelete != nil }, set: { if !$0 { itemToDelete = nil } }), titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let itemToDelete {
-                    do { try HouseArrestService.delete(itemToDelete); cache.invalidate(directory); load() }
+                    do { try HouseArrestService.delete(itemToDelete); cache.invalidate(directory); load(forceRefresh: true) }
                     catch { errorMessage = error.localizedDescription }
                 }
                 self.itemToDelete = nil
@@ -117,7 +120,7 @@ private struct HouseArrestDirectoryView: View {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { itemToRename = nil } }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Rename") {
-                            do { try HouseArrestService.rename(item, to: renameText); itemToRename = nil; cache.invalidate(directory); load() }
+                            do { try HouseArrestService.rename(item, to: renameText); itemToRename = nil; cache.invalidate(directory); load(forceRefresh: true) }
                             catch { errorMessage = error.localizedDescription }
                         }
                         .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -175,6 +178,14 @@ private struct HouseArrestDirectoryView: View {
             try HouseArrestService.list(directory)
         }.value
     }
+
+    private nonisolated static func importFiles(_ urls: [URL], to directory: URL) async throws {
+        try await Task.detached(priority: .userInitiated) {
+            for url in urls {
+                _ = try HouseArrestService.importFile(from: url, to: directory)
+            }
+        }.value
+    }
 }
 
 private struct HouseArrestFileView: View {
@@ -189,11 +200,14 @@ private struct HouseArrestFileView: View {
     @State private var exportPresented = false
     @State private var exportDocument = HouseArrestExportDocument(data: Data())
     @State private var isLoading = true
+    @State private var tooLarge = false
 
     var body: some View {
         Group {
             if isLoading {
                 ProgressView("Loading...")
+            } else if tooLarge {
+                ContentUnavailableView("File Too Large to Preview", systemImage: "doc.questionmark", description: Text("Use Save to Files to export it."))
             } else if editing {
                 TextEditor(text: $text).font(.system(size: 13, design: .monospaced))
             } else {
@@ -206,7 +220,7 @@ private struct HouseArrestFileView: View {
                 if editing {
                     Button("Cancel") { editing = false }
                     Button("Save") { save() }
-                } else if !item.isDirectory {
+                } else if !item.isDirectory && !tooLarge {
                     Button { beginEditing() } label: { Image(systemName: "square.and.pencil") }.accessibilityLabel("Edit file")
                 }
                 Button { prepareExport() } label: { Image(systemName: "folder.badge.plus") }
@@ -245,66 +259,142 @@ private struct HouseArrestFileView: View {
 
     private func load() {
         isLoading = true
-        do {
-            text = try decode(HouseArrestService.read(item.url))
-        } catch {
-            errorMessage = error.localizedDescription
+        tooLarge = false
+        let url = item.url
+        Task {
+            do {
+                let size = HouseArrestService.fileSize(url) ?? 0
+                if size > HouseArrestService.maxPreviewBytes {
+                    tooLarge = true
+                    isLoading = false
+                    return
+                }
+                let data = try await Self.readData(url)
+                let result = try await Self.decodeOffMain(data)
+                text = result.text
+                textEncoding = result.encoding
+                binaryEditing = result.isBinary
+                plistFormat = result.plistFormat
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isLoading = false
         }
-        isLoading = false
     }
 
     private func beginEditing() {
-        do {
-            let data = try HouseArrestService.read(item.url)
-            if HouseArrestService.needsEditingWarning(item.url) {
-                cautionData = data
-            } else {
-                startEditing(data)
+        let url = item.url
+        Task {
+            do {
+                let size = HouseArrestService.fileSize(url) ?? 0
+                guard size <= HouseArrestService.maxPreviewBytes else {
+                    errorMessage = HouseArrestError.fileTooLarge(size).localizedDescription
+                    return
+                }
+                let data = try await Self.readData(url)
+                if HouseArrestService.needsEditingWarning(url) {
+                    cautionData = data
+                } else {
+                    startEditing(data)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
             }
-        } catch { errorMessage = error.localizedDescription }
+        }
     }
 
     private func startEditing(_ data: Data) {
-        do { text = try decode(data); editing = true }
-        catch { errorMessage = error.localizedDescription }
+        Task {
+            do {
+                let result = try await Self.decodeOffMain(data)
+                text = result.text
+                textEncoding = result.encoding
+                binaryEditing = result.isBinary
+                plistFormat = result.plistFormat
+                editing = true
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     private func prepareExport() {
-        do {
-            exportDocument = HouseArrestExportDocument(data: try HouseArrestService.read(item.url))
-            exportPresented = true
-        } catch {
-            errorMessage = error.localizedDescription
+        let url = item.url
+        Task {
+            do {
+                let data = try await Self.readData(url)
+                exportDocument = HouseArrestExportDocument(data: data)
+                exportPresented = true
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
-    private func decode(_ data: Data) throws -> String {
-        binaryEditing = false
-        plistFormat = nil
-        if let plist = try? decodePlist(data) {
-            return plist
+    private nonisolated static func readData(_ url: URL) async throws -> Data {
+        try await Task.detached(priority: .userInitiated) {
+            try HouseArrestService.read(url)
+        }.value
+    }
+
+    private struct DecodeResult: Sendable {
+        let text: String
+        let encoding: String.Encoding
+        let isBinary: Bool
+        let plistFormat: PropertyListSerialization.PropertyListFormat?
+    }
+
+    private nonisolated static func decodeOffMain(_ data: Data) async throws -> DecodeResult {
+        try await Task.detached(priority: .userInitiated) {
+            try Self.decode(data)
+        }.value
+    }
+
+    private nonisolated static func decode(_ data: Data) throws -> DecodeResult {
+        if var format = PropertyListSerialization.PropertyListFormat?.some(.xml), !data.isEmpty,
+           let object = try? PropertyListSerialization.propertyList(from: data, options: [], format: &format) {
+            if JSONSerialization.isValidJSONObject(object),
+               let json = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) {
+                return DecodeResult(text: String(decoding: json, as: UTF8.self), encoding: .utf8, isBinary: false, plistFormat: format)
+            }
+            if let xml = try? PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0) {
+                return DecodeResult(text: String(decoding: xml, as: UTF8.self), encoding: .utf8, isBinary: false, plistFormat: format)
+            }
         }
+
         let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .utf32, .utf32LittleEndian, .utf32BigEndian, .ascii, .isoLatin1, .windowsCP1252, .macOSRoman]
         for encoding in encodings {
             guard let value = String(data: data, encoding: encoding), looksLikeText(value) else { continue }
-            textEncoding = encoding
-            return value
+            return DecodeResult(text: value, encoding: encoding, isBinary: false, plistFormat: nil)
         }
-        binaryEditing = true
-        return data.map { String(format: "%02X", $0) }.joined(separator: " ")
+
+        return DecodeResult(text: hexDump(data), encoding: .utf8, isBinary: true, plistFormat: nil)
     }
 
-    private func decodePlist(_ data: Data) throws -> String {
-        if data.isEmpty { throw HouseArrestError.accessDenied("Empty data is not a plist") }
-        var format = PropertyListSerialization.PropertyListFormat.xml
-        let object = try PropertyListSerialization.propertyList(from: data, options: [], format: &format)
-        plistFormat = format
-        if JSONSerialization.isValidJSONObject(object),
-           let json = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) {
-            return String(decoding: json, as: UTF8.self)
+    private nonisolated static func hexDump(_ data: Data) -> String {
+        let hexChars: [UInt8] = Array("0123456789ABCDEF".utf8)
+        var output = [UInt8]()
+        output.reserveCapacity(data.count * 3)
+        var first = true
+        data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+            for byte in raw {
+                if !first { output.append(0x20) }
+                first = false
+                output.append(hexChars[Int(byte >> 4)])
+                output.append(hexChars[Int(byte & 0x0F)])
+            }
         }
-        let xml = try PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0)
-        return String(decoding: xml, as: UTF8.self)
+        return String(decoding: output, as: UTF8.self)
+    }
+
+    private nonisolated static func looksLikeText(_ value: String) -> Bool {
+        guard !value.isEmpty else { return true }
+        let invalidCount = value.unicodeScalars.reduce(into: 0) { count, scalar in
+            let code = scalar.value
+            if code == 9 || code == 10 || code == 13 { return }
+            if code < 32 || (code >= 0x7F && code <= 0x9F) { count += 1 }
+        }
+        return Double(invalidCount) / Double(value.unicodeScalars.count) < 0.01
     }
 
     private func save() {
@@ -332,16 +422,6 @@ private struct HouseArrestFileView: View {
             try HouseArrestService.write(data, to: item.url)
             editing = false
         } catch { errorMessage = error.localizedDescription }
-    }
-
-    private func looksLikeText(_ value: String) -> Bool {
-        guard !value.isEmpty else { return true }
-        let invalidCount = value.unicodeScalars.reduce(into: 0) { count, scalar in
-            let code = scalar.value
-            if code == 9 || code == 10 || code == 13 { return }
-            if code < 32 || (code >= 0x7F && code <= 0x9F) { count += 1 }
-        }
-        return Double(invalidCount) / Double(value.unicodeScalars.count) < 0.01
     }
 }
 
