@@ -50,7 +50,7 @@ struct SystemAppsView: View {
                 }
             }
 
-            Section("Custom Bundle ID") {
+            Section {
                 TextField("com.apple.example", text: $customBundleID)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -58,6 +58,8 @@ struct SystemAppsView: View {
                     open(customBundleID)
                 }
                 .disabled(customBundleID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } header: {
+                Text("Custom Bundle ID")
             } footer: {
                 Text("Hidden or protected apps may refuse to open. Use the app's bundle identifier.")
             }

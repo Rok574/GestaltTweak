@@ -19,7 +19,7 @@ struct HouseArrestItem: Identifiable, Hashable, Sendable {
         return HouseArrestService.isEditable(url) ? "doc.text" : "doc"
     }
 
-    init(url: URL, isDirectory: Bool? = nil, displayName: String? = nil) {
+    nonisolated init(url: URL, isDirectory: Bool? = nil, displayName: String? = nil) {
         self.url = url
         self.displayName = displayName
         if let isDirectory {
@@ -32,7 +32,7 @@ struct HouseArrestItem: Identifiable, Hashable, Sendable {
 }
 
 enum HouseArrestService {
-    static let applicationsRoot = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application", isDirectory: true)
+    nonisolated static let applicationsRoot = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application", isDirectory: true)
 
     nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
         let isApplicationsRoot = directory.standardizedFileURL.path == applicationsRoot.path
