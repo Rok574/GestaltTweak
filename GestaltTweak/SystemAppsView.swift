@@ -1,6 +1,8 @@
 import SwiftUI
 import Foundation
-import Darwin
+
+@_silgen_name("objc_msgSend")
+private func systemAppsSendMessage(_ receiver: AnyObject, _ selector: Selector, _ argument: NSString) -> Bool
 
 nonisolated private struct SystemApp: Identifiable, Sendable {
     let name: String
@@ -24,10 +26,7 @@ private enum SystemAppLauncher {
 
         let selector = NSSelectorFromString("openApplicationWithBundleID:")
         guard workspace.responds(to: selector) else { return false }
-        typealias OpenApplicationFunction = @convention(c) (AnyObject, Selector, NSString) -> Bool
-        guard let symbol = dlsym(RTLD_DEFAULT, "objc_msgSend") else { return false }
-        let sendMessage = unsafeBitCast(symbol, to: OpenApplicationFunction.self)
-        return sendMessage(workspace, selector, bundleID as NSString)
+        return systemAppsSendMessage(workspace, selector, bundleID as NSString)
     }
 
     nonisolated static func discoverAppleApps() -> [SystemApp]? {
