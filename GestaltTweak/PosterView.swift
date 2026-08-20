@@ -33,10 +33,7 @@ struct PosterView: View {
                         }
                         .foregroundStyle(.indigo)
                     } else {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.indigo)
-                            Text("Apply").foregroundStyle(.primary)
-                        }
+                        AppActionRow(icon: "checkmark.circle.fill", color: .indigo, title: "Apply", subtitle: "Write imported packs")
                     }
                 }
                 .disabled(viewModel.posterFiles.isEmpty || busy)
@@ -44,10 +41,7 @@ struct PosterView: View {
                 Button {
                     reset()
                 } label: {
-                    HStack {
-                        Image(systemName: "arrow.counterclockwise").foregroundStyle(.indigo)
-                        Text("Reset").foregroundStyle(.primary)
-                    }
+                    AppActionRow(icon: "arrow.counterclockwise", color: .indigo, title: "Reset", subtitle: "Restore PosterBoard files")
                 }
                 .disabled(busy)
             } footer: {
@@ -58,20 +52,14 @@ struct PosterView: View {
                 Button {
                     show_importer = true
                 } label: {
-                    HStack {
-                        Image(systemName: "square.and.arrow.down").foregroundStyle(.indigo)
-                        Text("Import Tendies").foregroundStyle(.primary)
-                    }
+                    AppActionRow(icon: "square.and.arrow.down", color: .indigo, title: "Import Tendies", subtitle: "Choose wallpaper packs")
                 }
                 .disabled(busy)
 
                 Button {
                     show_explorer = true
                 } label: {
-                    HStack {
-                        Image(systemName: "sparkles").foregroundStyle(.indigo)
-                        Text("Explore Tendies").foregroundStyle(.primary)
-                    }
+                    AppActionRow(icon: "sparkles", color: .indigo, title: "Explore Tendies", subtitle: "Browse available packs")
                 }
                 .disabled(busy)
             } footer: {
@@ -81,10 +69,7 @@ struct PosterView: View {
             if !viewModel.posterFiles.isEmpty {
                 Section {
                     ForEach(viewModel.posterFiles, id: \.self) { url in
-                        HStack {
-                            Image(systemName: "doc").foregroundStyle(.indigo)
-                            Text(url.lastPathComponent).foregroundStyle(.primary)
-                        }
+                        AppActionRow(icon: "doc", color: .indigo, title: url.lastPathComponent, subtitle: "Imported pack")
                     }
                     .onDelete { offsets in
                         viewModel.removePosterFiles(at: offsets)

@@ -240,6 +240,30 @@ struct ContentView: View {
 }
 
 private struct UnsupportedOSView: View {
+
+    struct AppActionRow: View {
+        let icon: String
+        let color: Color
+        let title: String
+        let subtitle: String
+
+        var body: some View {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(color))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).foregroundStyle(.primary)
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+            }
+            .padding(.vertical, 3)
+        }
+    }
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -484,26 +508,21 @@ private struct BackupLibrary: View {
     @State private var backupToRestore: GestaltBackup?
     @State private var showsBackupImporter = false
 
+
     var body: some View {
         List {
             Section {
                 Button {
                     viewModel.createBackup()
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill").foregroundStyle(.indigo)
-                        Text("Back Up Current MobileGestalt").foregroundStyle(.primary)
-                    }
+                    AppActionRow(icon: "plus.circle.fill", color: .indigo, title: "Back Up Current MobileGestalt", subtitle: "Save a local snapshot")
                 }
                 .disabled(viewModel.plist == nil || viewModel.isBusy)
 
                 Button {
                     showsBackupImporter = true
                 } label: {
-                    HStack {
-                        Image(systemName: "square.and.arrow.down").foregroundStyle(.indigo)
-                        Text("Import Backup").foregroundStyle(.primary)
-                    }
+                    AppActionRow(icon: "square.and.arrow.down", color: .indigo, title: "Import Backup", subtitle: "Add a plist snapshot")
                 }
                 .disabled(viewModel.isBusy)
             } footer: {
@@ -512,10 +531,7 @@ private struct BackupLibrary: View {
 
             Section("Local Backups") {
                 if viewModel.backups.isEmpty {
-                    HStack {
-                        Image(systemName: "archivebox").foregroundStyle(.indigo)
-                        Text("No Backups").foregroundStyle(.secondary)
-                    }
+                    AppActionRow(icon: "archivebox", color: .indigo, title: "No Backups", subtitle: "Create or import one above")
                 } else {
                     ForEach(viewModel.backups) { backup in
                         BackupRow(backup: backup) {
