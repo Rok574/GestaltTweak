@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct SystemApp: Identifiable {
+nonisolated private struct SystemApp: Identifiable, Sendable {
     let name: String
     let bundleID: String
 
