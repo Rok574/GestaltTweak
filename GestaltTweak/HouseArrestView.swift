@@ -177,8 +177,12 @@ private struct HouseArrestFileView: View {
             let data: Data
             if let format = plistFormat {
                 let edited = Data(text.utf8)
-                let object = (try? JSONSerialization.jsonObject(with: edited))
-                    ?? (try PropertyListSerialization.propertyList(from: edited, options: [], format: nil))
+                let object: Any
+                if let json = try? JSONSerialization.jsonObject(with: edited) {
+                    object = json
+                } else {
+                    object = try PropertyListSerialization.propertyList(from: edited, options: [], format: nil)
+                }
                 data = try PropertyListSerialization.data(fromPropertyList: object, format: format, options: 0)
             } else {
                 guard let encoded = text.data(using: .utf8) else { throw HouseArrestError.accessDenied("Could not encode text") }
