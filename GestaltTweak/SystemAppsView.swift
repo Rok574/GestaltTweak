@@ -1,9 +1,6 @@
 import SwiftUI
 import Foundation
 
-@_silgen_name("objc_msgSend")
-private func systemAppsSendMessage(_ receiver: AnyObject, _ selector: Selector, _ argument: NSString) -> Bool
-
 nonisolated private struct SystemApp: Identifiable, Sendable {
     let name: String
     let bundleID: String
@@ -13,20 +10,7 @@ nonisolated private struct SystemApp: Identifiable, Sendable {
 
 private enum SystemAppLauncher {
     nonisolated static func open(bundleID: String) -> Bool {
-        guard let workspaceClass = NSClassFromString("LSApplicationWorkspace") as? NSObject.Type,
-              let workspace = workspaceClass.perform(NSSelectorFromString("defaultWorkspace"))?.takeUnretainedValue() as? NSObject else {
-            return false
-        }
-
-                let proxySelector = NSSelectorFromString("applicationProxyForBundleIdentifier:")
-                guard workspace.responds(to: proxySelector),
-                            workspace.perform(proxySelector, with: bundleID) != nil else {
-                        return false
-                }
-
-        let selector = NSSelectorFromString("openApplicationWithBundleID:")
-        guard workspace.responds(to: selector) else { return false }
-        return systemAppsSendMessage(workspace, selector, bundleID as NSString)
+        GTLaunchApplication(bundleID)
     }
 
     nonisolated static func discoverAppleApps() -> [SystemApp]? {

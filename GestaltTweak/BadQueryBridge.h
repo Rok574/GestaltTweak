@@ -31,4 +31,6 @@ FOUNDATION_EXPORT BadQueryLease * _Nullable GTLeaseForPath(NSString *path,
 FOUNDATION_EXPORT NSArray<NSString *> * _Nullable GTListContainers(NSString *path,
                                                                    int64_t max_inode);
 
+FOUNDATION_EXPORT BOOL GTLaunchApplication(NSString *bundleID);
+
 NS_ASSUME_NONNULL_END

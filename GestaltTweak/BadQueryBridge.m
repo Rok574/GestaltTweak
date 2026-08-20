@@ -17,6 +17,7 @@
 #import <sys/mount.h>
 #import <sys/stat.h>
 #import <xpc/xpc.h>
+#import <objc/message.h>
 
 static const uint64_t kBadQueryContainerClass = 13;
 static const uint64_t kBadQueryPart = 3;
@@ -204,4 +205,26 @@ NSArray<NSString *> *GTListContainers(NSString *path, int64_t max_inode)
         [result addObject:@(p)];
     }
     return result;
+}
+
+BOOL GTLaunchApplication(NSString *bundleID)
+{
+    if (bundleID.length == 0) return NO;
+
+    Class workspaceClass = NSClassFromString(@"LSApplicationWorkspace");
+    if (!workspaceClass) return NO;
+
+    SEL defaultSelector = NSSelectorFromString(@"defaultWorkspace");
+    if (![workspaceClass respondsToSelector:defaultSelector]) return NO;
+    id workspace = ((id (*)(id, SEL))objc_msgSend)(workspaceClass, defaultSelector);
+    if (!workspace) return NO;
+
+    SEL proxySelector = NSSelectorFromString(@"applicationProxyForBundleIdentifier:");
+    if (![workspace respondsToSelector:proxySelector]) return NO;
+    id proxy = ((id (*)(id, SEL, NSString *))objc_msgSend)(workspace, proxySelector, bundleID);
+    if (!proxy) return NO;
+
+    SEL openSelector = NSSelectorFromString(@"openApplicationWithBundleID:");
+    if (![workspace respondsToSelector:openSelector]) return NO;
+    return ((BOOL (*)(id, SEL, NSString *))objc_msgSend)(workspace, openSelector, bundleID);
 }
