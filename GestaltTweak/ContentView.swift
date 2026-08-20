@@ -527,6 +527,7 @@ private struct BackupLibrary: View {
                 .disabled(viewModel.isBusy)
             } footer: {
                 Text("The original plist is backed up before every write.")
+                    .foregroundStyle(.secondary)
             }
 
             Section("Local Backups") {

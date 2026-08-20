@@ -46,6 +46,7 @@ struct PosterView: View {
                 .disabled(busy)
             } footer: {
                 Text("Writes the imported packs into PosterBoard and restarts it.")
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -64,6 +65,7 @@ struct PosterView: View {
                 .disabled(busy)
             } footer: {
                 Text("Up to 5 packs per session.")
+                    .foregroundStyle(.secondary)
             }
 
             if !viewModel.posterFiles.isEmpty {
