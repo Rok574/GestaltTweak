@@ -6,12 +6,12 @@ struct HouseArrestItem: Identifiable, Hashable, Sendable {
     let isDirectory: Bool
     let displayName: String?
 
-    var id: String { url.path }
-    var name: String { displayName ?? url.lastPathComponent }
-    var isHidden: Bool { name.hasPrefix(".") }
-    var contentType: UTType? { try? url.resourceValues(forKeys: [.contentTypeKey]).contentType }
+    nonisolated var id: String { url.path }
+    nonisolated var name: String { displayName ?? url.lastPathComponent }
+    nonisolated var isHidden: Bool { name.hasPrefix(".") }
+    nonisolated var contentType: UTType? { try? url.resourceValues(forKeys: [.contentTypeKey]).contentType }
 
-    var iconName: String {
+    nonisolated var iconName: String {
         if isDirectory { return "folder.fill" }
         if contentType?.conforms(to: .image) == true { return "photo" }
         if contentType?.conforms(to: .audio) == true { return "waveform" }
