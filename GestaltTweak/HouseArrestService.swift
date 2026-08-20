@@ -1,7 +1,7 @@
 import Foundation
 import UniformTypeIdentifiers
 
-struct HouseArrestItem: Identifiable, Hashable {
+struct HouseArrestItem: Identifiable, Hashable, Sendable {
     let url: URL
     let isDirectory: Bool
     let displayName: String?
@@ -34,7 +34,7 @@ struct HouseArrestItem: Identifiable, Hashable {
 enum HouseArrestService {
     static let applicationsRoot = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application", isDirectory: true)
 
-    static func list(_ directory: URL) throws -> [HouseArrestItem] {
+    nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
         let lease = try acquire(directory.path)
         defer { lease.invalidate() }
         let urls = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: [])
@@ -47,37 +47,37 @@ enum HouseArrestService {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    static func read(_ url: URL) throws -> Data {
+    nonisolated static func read(_ url: URL) throws -> Data {
         let lease = try acquire(url.path)
         defer { lease.invalidate() }
         return try Data(contentsOf: url, options: .mappedIfSafe)
     }
 
-    static func write(_ data: Data, to url: URL) throws {
-        let lease = try acquire(url.path)
+    nonisolated static func write(_ data: Data, to url: URL) throws {
+        let lease = try acquire(url.deletingLastPathComponent().path)
         defer { lease.invalidate() }
         try data.write(to: url, options: .atomic)
     }
 
-    static func importFile(from source: URL, to directory: URL) throws -> URL {
+    nonisolated static func importFile(from source: URL, to directory: URL) throws -> URL {
         let sourceAccess = source.startAccessingSecurityScopedResource()
         defer { if sourceAccess { source.stopAccessingSecurityScopedResource() } }
         let lease = try acquire(directory.path)
         defer { lease.invalidate() }
         let destination = directory.appendingPathComponent(safeFileName(source.lastPathComponent), isDirectory: false)
-        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
+        if FileManager.default.fileExists(atPath: destination.path) { throw HouseArrestError.fileAlreadyExists }
         try FileManager.default.copyItem(at: source, to: destination)
         return destination
     }
 
-    static func delete(_ item: HouseArrestItem) throws {
+    nonisolated static func delete(_ item: HouseArrestItem) throws {
         guard !item.isDirectory else { throw HouseArrestError.directoryDeletionDisabled }
-        let lease = try acquire(item.url.path)
+        let lease = try acquire(item.url.deletingLastPathComponent().path)
         defer { lease.invalidate() }
         try FileManager.default.removeItem(at: item.url)
     }
 
-    static func rename(_ item: HouseArrestItem, to name: String) throws {
+    nonisolated static func rename(_ item: HouseArrestItem, to name: String) throws {
         let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty, cleaned != ".", cleaned != "..", !cleaned.contains("/") else {
             throw HouseArrestError.invalidFileName
@@ -85,35 +85,36 @@ enum HouseArrestService {
         let lease = try acquire(item.url.deletingLastPathComponent().path)
         defer { lease.invalidate() }
         let destination = item.url.deletingLastPathComponent().appendingPathComponent(cleaned, isDirectory: item.isDirectory)
+        if destination.standardizedFileURL.path == item.url.standardizedFileURL.path { return }
         if FileManager.default.fileExists(atPath: destination.path) {
             throw HouseArrestError.fileAlreadyExists
         }
         try FileManager.default.moveItem(at: item.url, to: destination)
     }
 
-    static func isEditable(_ url: URL) -> Bool {
+    nonisolated static func isEditable(_ url: URL) -> Bool {
         ["txt", "json", "xml", "plist", "strings", "md", "csv", "log", "conf", "ini", "yaml", "yml"].contains(url.pathExtension.lowercased())
     }
 
-    private static func acquire(_ path: String) throws -> BadQueryLease {
+    private nonisolated static func acquire(_ path: String) throws -> BadQueryLease {
         var message: NSString?
         guard let lease = GTLeaseForPath(path, &message) else { throw HouseArrestError.accessDenied((message as String?) ?? path) }
         return lease
     }
 
-    private static func bundleIdentifier(for container: URL) -> String? {
+    private nonisolated static func bundleIdentifier(for container: URL) -> String? {
         let metadata = container.appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
         guard let data = try? read(metadata), let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else { return nil }
-        return plist?["MCMMetadataIdentifier"] as? String
+        return plist["MCMMetadataIdentifier"] as? String
     }
 
-    private static func safeFileName(_ name: String) -> String {
+    private nonisolated static func safeFileName(_ name: String) -> String {
         let cleaned = name.replacingOccurrences(of: "/", with: "-")
         return cleaned.isEmpty ? "Imported File" : cleaned
     }
 }
 
-enum HouseArrestError: LocalizedError {
+enum HouseArrestError: LocalizedError, Sendable {
     case accessDenied(String)
     case directoryDeletionDisabled
     case invalidFileName
