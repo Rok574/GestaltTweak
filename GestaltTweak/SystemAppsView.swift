@@ -26,7 +26,7 @@ private enum SystemAppLauncher {
             return nil
         }
 
-        return applications.compactMap { application in
+                let discovered = applications.compactMap { application in
             guard let identifier = application.perform(bundleSelector)?.takeUnretainedValue() as? String,
                   identifier.hasPrefix("com.apple.") else {
                 return nil
@@ -40,6 +40,7 @@ private enum SystemAppLauncher {
         .sorted { (left: SystemApp, right: SystemApp) in
             left.name.localizedCaseInsensitiveCompare(right.name) == .orderedAscending
         }
+        return discovered.isEmpty ? nil : discovered
     }
 }
 

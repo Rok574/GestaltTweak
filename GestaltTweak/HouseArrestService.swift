@@ -134,12 +134,21 @@ enum HouseArrestService {
     }
 
     private nonisolated static func bundleIdentifier(for container: URL) -> String? {
-        let metadata = container.appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
-        if let data = try? Data(contentsOf: metadata), let identifier = metadataIdentifier(from: data) {
-            return identifier
+        let metadataURLs = [
+            container.appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist"),
+            container.appendingPathComponent("com.apple.mobile_container_manager.metadata.plist")
+        ]
+        for metadata in metadataURLs {
+            if let data = try? Data(contentsOf: metadata), let identifier = metadataIdentifier(from: data) {
+                return identifier
+            }
         }
-        guard let data = try? read(metadata) else { return nil }
-        return metadataIdentifier(from: data)
+        for metadata in metadataURLs {
+            if let data = try? read(metadata), let identifier = metadataIdentifier(from: data) {
+                return identifier
+            }
+        }
+        return nil
     }
 
     private nonisolated static func metadataIdentifier(from data: Data) -> String? {
