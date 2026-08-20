@@ -153,11 +153,9 @@ private struct HouseArrestDirectoryView: View {
             isLoading = false
             return
         }
-        Task { @MainActor in
+        Task {
             do {
-                let result = try await Task.detached(priority: .userInitiated) {
-                    try HouseArrestService.list(directory)
-                }.value
+                let result = try await Self.loadListing(for: directory)
                 cache.store(result, for: directory)
                 items = result
                 isLoading = false
@@ -166,6 +164,12 @@ private struct HouseArrestDirectoryView: View {
                 isLoading = false
             }
         }
+    }
+
+    private nonisolated static func loadListing(for directory: URL) async throws -> [HouseArrestItem] {
+        try await Task.detached(priority: .userInitiated) {
+            try HouseArrestService.list(directory)
+        }.value
     }
 }
 
