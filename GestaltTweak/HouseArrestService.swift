@@ -124,7 +124,13 @@ enum HouseArrestService {
     }
 
     nonisolated static func isEditable(_ url: URL) -> Bool {
-        ["txt", "json", "xml", "plist", "strings", "md", "csv", "log", "conf", "ini", "yaml", "yml"].contains(url.pathExtension.lowercased())
+        var isDirectory = ObjCBool(false)
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) && !isDirectory.boolValue
+    }
+
+    nonisolated static func needsEditingWarning(_ url: URL) -> Bool {
+        let knownTextExtensions = ["txt", "json", "xml", "plist", "strings", "md", "csv", "log", "conf", "ini", "yaml", "yml"]
+        return !knownTextExtensions.contains(url.pathExtension.lowercased())
     }
 
     private nonisolated static func acquire(_ path: String) throws -> BadQueryLease {

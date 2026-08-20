@@ -182,8 +182,10 @@ private struct HouseArrestFileView: View {
     @State private var text = ""
     @State private var editing = false
     @State private var textEncoding: String.Encoding = .utf8
+    @State private var binaryEditing = false
     @State private var plistFormat: PropertyListSerialization.PropertyListFormat?
     @State private var errorMessage: String?
+    @State private var cautionData: Data?
     @State private var exportPresented = false
     @State private var exportDocument = HouseArrestExportDocument(data: Data())
 
@@ -219,10 +221,38 @@ private struct HouseArrestFileView: View {
         .alert("File Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(errorMessage ?? "") }
+        .confirmationDialog("Proceed with caution?", isPresented: Binding(
+            get: { cautionData != nil },
+            set: { if !$0 { cautionData = nil } }
+        ), titleVisibility: .visible) {
+            Button("Edit File") {
+                if let cautionData {
+                    startEditing(cautionData)
+                    self.cautionData = nil
+                }
+            }
+            Button("Cancel", role: .cancel) { cautionData = nil }
+        } message: {
+            Text("This file type is unknown. Text changes or byte changes can make the file unusable.")
+        }
     }
 
     private func load() { do { text = try decode(HouseArrestService.read(item.url)) } catch { errorMessage = error.localizedDescription } }
-    private func beginEditing() { do { text = try decode(HouseArrestService.read(item.url)); editing = true } catch { errorMessage = error.localizedDescription } }
+    private func beginEditing() {
+        do {
+            let data = try HouseArrestService.read(item.url)
+            if HouseArrestService.needsEditingWarning(item.url) {
+                cautionData = data
+            } else {
+                startEditing(data)
+            }
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func startEditing(_ data: Data) {
+        do { text = try decode(data); editing = true }
+        catch { errorMessage = error.localizedDescription }
+    }
     private func prepareExport() {
         do {
             exportDocument = HouseArrestExportDocument(data: try HouseArrestService.read(item.url))
@@ -233,16 +263,9 @@ private struct HouseArrestFileView: View {
     }
 
     private func decode(_ data: Data) throws -> String {
-        if item.url.pathExtension.lowercased() == "plist" {
-            var format = PropertyListSerialization.PropertyListFormat.xml
-            let object = try PropertyListSerialization.propertyList(from: data, options: [], format: &format)
-            plistFormat = format
-            if JSONSerialization.isValidJSONObject(object),
-               let json = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) {
-                return String(decoding: json, as: UTF8.self)
-            }
-            let xml = try PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0)
-            return String(decoding: xml, as: UTF8.self)
+        binaryEditing = false
+        if let plist = try? decodePlist(data) {
+            return plist
         }
         let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .utf32, .utf32LittleEndian, .utf32BigEndian, .ascii, .isoLatin1, .windowsCP1252, .macOSRoman]
         for encoding in encodings {
@@ -250,13 +273,33 @@ private struct HouseArrestFileView: View {
             textEncoding = encoding
             return value
         }
-        throw HouseArrestError.accessDenied("Unsupported binary file")
+        binaryEditing = true
+        return data.map { String(format: "%02X", $0) }.joined(separator: " ")
+    }
+
+    private func decodePlist(_ data: Data) throws -> String {
+        if data.isEmpty { throw HouseArrestError.accessDenied("Empty data is not a plist") }
+        var format = PropertyListSerialization.PropertyListFormat.xml
+        let object = try PropertyListSerialization.propertyList(from: data, options: [], format: &format)
+        plistFormat = format
+        if JSONSerialization.isValidJSONObject(object),
+           let json = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]) {
+            return String(decoding: json, as: UTF8.self)
+        }
+        let xml = try PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0)
+        return String(decoding: xml, as: UTF8.self)
     }
 
     private func save() {
         do {
             let data: Data
-            if let format = plistFormat {
+            if binaryEditing {
+                let pieces = text.split { $0 == " " || $0 == "\n" || $0 == "\t" || $0 == "\r" }
+                guard pieces.allSatisfy({ $0.count == 2 && UInt8($0, radix: 16) != nil }) else {
+                    throw HouseArrestError.accessDenied("Binary edits must contain two-digit hexadecimal bytes separated by spaces.")
+                }
+                data = Data(pieces.compactMap { UInt8($0, radix: 16) })
+            } else if let format = plistFormat {
                 let edited = Data(text.utf8)
                 let object: Any
                 if let json = try? JSONSerialization.jsonObject(with: edited) {
