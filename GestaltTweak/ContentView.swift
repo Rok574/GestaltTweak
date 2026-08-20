@@ -240,30 +240,6 @@ struct ContentView: View {
 }
 
 private struct UnsupportedOSView: View {
-
-    struct AppActionRow: View {
-        let icon: String
-        let color: Color
-        let title: String
-        let subtitle: String
-
-        var body: some View {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 34, height: 34)
-                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(color))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).foregroundStyle(.primary)
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-            }
-            .padding(.vertical, 3)
-        }
-    }
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
@@ -276,6 +252,30 @@ private struct UnsupportedOSView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(24)
+    }
+}
+
+struct AppActionRow: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(color))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundStyle(.primary)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(.vertical, 3)
     }
 }
 
