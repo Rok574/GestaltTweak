@@ -6,9 +6,11 @@
 <p align="center">
   <strong>Modify MobileGestalt On iOS 27 Dev Beta 1-4!</strong>
 </p>
+
 ---
 
-**Supported IOS Versions: **
+**Supported IOS Versions:**
+
 | iOS Version | Support |
 |---|---|
 | iOS ≤ 26.x | unsupported |
@@ -18,13 +20,16 @@
 | iOS 27.0 public beta ≥ 3 | unsupported |
 
 ---
-**Implemented:**<br>
-&#45; PosterBoard<br>
-&#45; MobileGestalt Editor<br>
-&#45; HouseArrest File Browser<br>
-&#45; System App Opener<br>
+
+**Implemented:**
+
+- PosterBoard
+- MobileGestalt Editor
+- HouseArrest File Browser
+- System App Opener
 
 ---
+
 ## Credits & Acknowledgments
 
 GestaltTweak is made possible thanks to the work of the following developers and projects:
