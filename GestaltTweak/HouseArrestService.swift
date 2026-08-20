@@ -36,34 +36,31 @@ enum HouseArrestService {
 
     nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
         let isApplicationsRoot = directory.standardizedFileURL.path == applicationsRoot.path
+
+        // The app-container root is discovered through the inode enumerator.
+        // It is not itself a bad_query-grantable container path.
+        if isApplicationsRoot {
+            if let urls = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+                let containers = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+                if !containers.isEmpty {
+                    return containerItems(containers)
+                }
+            }
+
+            let containerPaths = GTListContainers(directory.path, 2_000_000) ?? []
+            guard !containerPaths.isEmpty else { throw HouseArrestError.accessDenied(directory.path) }
+            return containerItems(containerPaths.map { URL(fileURLWithPath: $0, isDirectory: true) })
+        }
+
         let lease = try acquire(directory.path)
         defer { lease.invalidate() }
+        let urls = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: [])
+        return urls.map { HouseArrestItem(url: $0) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
 
-        if let urls = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: []) {
-            if !isApplicationsRoot {
-                return urls.map { HouseArrestItem(url: $0) }
-                    .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            }
-
-            let containers = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-            if !containers.isEmpty {
-                return containers
-                    .map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
-                    .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            }
-        }
-
-        guard isApplicationsRoot else {
-            throw HouseArrestError.accessDenied(directory.path)
-        }
-
-        let containerPaths = GTListContainers(directory.path, 2_000_000) ?? []
-        guard !containerPaths.isEmpty else {
-            throw HouseArrestError.accessDenied(directory.path)
-        }
-        return containerPaths
-            .map { URL(fileURLWithPath: $0, isDirectory: true) }
-            .map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
+    private nonisolated static func containerItems(_ urls: [URL]) -> [HouseArrestItem] {
+        urls.map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
