@@ -76,6 +76,16 @@ struct ContentView: View {
                                     subtitle: "Browse, import, edit, and delete files"
                                 )
                             }
+                            NavigationLink {
+                                SystemAppsView()
+                            } label: {
+                                moduleRow(
+                                    icon: "apps.iphone",
+                                    tint: .indigo,
+                                    title: "System Apps",
+                                    subtitle: "Open any installed apps"
+                                )
+                            }
                         }
                         .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
 
