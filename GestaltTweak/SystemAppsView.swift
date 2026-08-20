@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import Darwin
 
 nonisolated private struct SystemApp: Identifiable, Sendable {
     let name: String
@@ -23,16 +24,10 @@ private enum SystemAppLauncher {
 
         let selector = NSSelectorFromString("openApplicationWithBundleID:")
         guard workspace.responds(to: selector) else { return false }
-                guard let signature = workspace.methodSignature(for: selector) else { return false }
-                let invocation = NSInvocation(methodSignature: signature)
-                invocation.target = workspace
-                invocation.selector = selector
-                var argument = bundleID as NSString
-                invocation.setArgument(&argument, at: 2)
-                invocation.invoke()
-                var opened = false
-                invocation.getReturnValue(&opened)
-                return opened
+        typealias OpenApplicationFunction = @convention(c) (AnyObject, Selector, NSString) -> Bool
+        guard let symbol = dlsym(RTLD_DEFAULT, "objc_msgSend") else { return false }
+        let sendMessage = unsafeBitCast(symbol, to: OpenApplicationFunction.self)
+        return sendMessage(workspace, selector, bundleID as NSString)
     }
 
     nonisolated static func discoverAppleApps() -> [SystemApp]? {
@@ -42,6 +37,7 @@ private enum SystemAppLauncher {
         }
         let selector = NSSelectorFromString("allApplications")
         let bundleSelector = NSSelectorFromString("bundleIdentifier")
+        let nameSelector = NSSelectorFromString("localizedName")
         guard workspace.responds(to: selector),
               let applications = workspace.perform(selector)?.takeUnretainedValue() as? [NSObject] else {
             return nil
@@ -53,9 +49,14 @@ private enum SystemAppLauncher {
                 return nil
             }
             let shortName = String(identifier.dropFirst("com.apple.".count))
-            return SystemApp(name: shortName.isEmpty ? identifier : shortName, bundleID: identifier)
+            let fallbackName = shortName.isEmpty ? identifier : shortName
+            let localizedName = application.perform(nameSelector)?.takeUnretainedValue() as? String
+            let displayName = localizedName.flatMap { $0.isEmpty ? nil : $0 } ?? fallbackName
+            return SystemApp(name: displayName, bundleID: identifier)
         }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        .sorted { (left: SystemApp, right: SystemApp) in
+            left.name.localizedCaseInsensitiveCompare(right.name) == .orderedAscending
+        }
     }
 }
 
@@ -147,7 +148,9 @@ struct SystemAppsView: View {
         isLoading = true
         Task {
             do {
-                let result = try await Self.findSystemApps()
+                let result = try await Task.detached(priority: .userInitiated) {
+                    try Self.findSystemApps()
+                }.value
                 apps = result
                 isLoading = false
             } catch {
@@ -157,19 +160,19 @@ struct SystemAppsView: View {
         }
     }
 
-    private nonisolated static func findSystemApps() async throws -> [SystemApp] {
-        try await Task.detached(priority: .userInitiated) {
-            if let discovered = SystemAppLauncher.discoverAppleApps() {
-                return discovered
+    private nonisolated static func findSystemApps() throws -> [SystemApp] {
+        if let discovered = SystemAppLauncher.discoverAppleApps() {
+            return discovered
+        }
+        return try HouseArrestService.list(HouseArrestService.applicationsRoot)
+            .filter { $0.isDirectory && $0.name.hasPrefix("com.apple.") }
+            .map {
+                let bundleID = $0.name
+                let shortName = String(bundleID.dropFirst("com.apple.".count))
+                return SystemApp(name: shortName.isEmpty ? bundleID : shortName, bundleID: bundleID)
             }
-            try HouseArrestService.list(HouseArrestService.applicationsRoot)
-                .filter { $0.isDirectory && $0.name.hasPrefix("com.apple.") }
-                .map {
-                    let bundleID = $0.name
-                    let shortName = String(bundleID.dropFirst("com.apple.".count))
-                    return SystemApp(name: shortName.isEmpty ? bundleID : shortName, bundleID: bundleID)
-                }
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        }.value
+            .sorted { (left: SystemApp, right: SystemApp) in
+                left.name.localizedCaseInsensitiveCompare(right.name) == .orderedAscending
+            }
     }
 }
