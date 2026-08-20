@@ -36,7 +36,10 @@ private struct HouseArrestDirectoryView: View {
                                 .contextMenu { renameButton(for: item) }
                         } else {
                             NavigationLink { HouseArrestFileView(item: item) } label: { itemRow(item) }
-                                .contextMenu { renameButton(for: item) }
+                                .contextMenu {
+                                    renameButton(for: item)
+                                    deleteButton(for: item)
+                                }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button { beginRename(item) } label: { Label("Rename", systemImage: "pencil") }
                                     Button(role: .destructive) { itemToDelete = item } label: { Label("Delete", systemImage: "trash") }
@@ -106,6 +109,10 @@ private struct HouseArrestDirectoryView: View {
     @ViewBuilder
     private func renameButton(for item: HouseArrestItem) -> some View {
         Button { beginRename(item) } label: { Label("Rename", systemImage: "pencil") }
+    }
+
+    private func deleteButton(for item: HouseArrestItem) -> some View {
+        Button(role: .destructive) { itemToDelete = item } label: { Label("Delete", systemImage: "trash") }
     }
 
     private func beginRename(_ item: HouseArrestItem) {

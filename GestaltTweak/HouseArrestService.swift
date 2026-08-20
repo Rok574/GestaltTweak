@@ -35,25 +35,35 @@ enum HouseArrestService {
     static let applicationsRoot = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application", isDirectory: true)
 
     nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
-        if directory.standardizedFileURL.path == applicationsRoot.path {
-            let containerPaths = GTListContainers(directory.path, 2_000_000) ?? []
-            if !containerPaths.isEmpty {
-                return containerPaths
-                    .map { URL(fileURLWithPath: $0, isDirectory: true) }
+        let isApplicationsRoot = directory.standardizedFileURL.path == applicationsRoot.path
+        let lease = try acquire(directory.path)
+        defer { lease.invalidate() }
+
+        if let urls = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: []) {
+            if !isApplicationsRoot {
+                return urls.map { HouseArrestItem(url: $0) }
+                    .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            }
+
+            let containers = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            if !containers.isEmpty {
+                return containers
                     .map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
                     .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             }
         }
 
-        let lease = try acquire(directory.path)
-        defer { lease.invalidate() }
-        let urls = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: [])
-        if directory.standardizedFileURL.path == applicationsRoot.path {
-            return urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
-                .map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        guard isApplicationsRoot else {
+            throw HouseArrestError.accessDenied(directory.path)
         }
-        return urls.map { HouseArrestItem(url: $0) }
+
+        let containerPaths = GTListContainers(directory.path, 2_000_000) ?? []
+        guard !containerPaths.isEmpty else {
+            throw HouseArrestError.accessDenied(directory.path)
+        }
+        return containerPaths
+            .map { URL(fileURLWithPath: $0, isDirectory: true) }
+            .map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
@@ -82,9 +92,14 @@ enum HouseArrestService {
 
     nonisolated static func delete(_ item: HouseArrestItem) throws {
         guard !item.isDirectory else { throw HouseArrestError.directoryDeletionDisabled }
-        let lease = try acquire(item.url.deletingLastPathComponent().path)
-        defer { lease.invalidate() }
+        let parentLease = try acquire(item.url.deletingLastPathComponent().path)
+        defer { parentLease.invalidate() }
+        let itemLease = try acquire(item.url.path)
+        defer { itemLease.invalidate() }
         try FileManager.default.removeItem(at: item.url)
+        if FileManager.default.fileExists(atPath: item.url.path) {
+            throw HouseArrestError.deleteFailed
+        }
     }
 
     nonisolated static func rename(_ item: HouseArrestItem, to name: String) throws {
@@ -114,7 +129,15 @@ enum HouseArrestService {
 
     private nonisolated static func bundleIdentifier(for container: URL) -> String? {
         let metadata = container.appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
-        guard let data = try? read(metadata), let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else { return nil }
+        if let data = try? Data(contentsOf: metadata), let identifier = metadataIdentifier(from: data) {
+            return identifier
+        }
+        guard let data = try? read(metadata) else { return nil }
+        return metadataIdentifier(from: data)
+    }
+
+    private nonisolated static func metadataIdentifier(from data: Data) -> String? {
+        guard let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] else { return nil }
         return plist["MCMMetadataIdentifier"] as? String
     }
 
@@ -129,6 +152,7 @@ enum HouseArrestError: LocalizedError, Sendable {
     case directoryDeletionDisabled
     case invalidFileName
     case fileAlreadyExists
+    case deleteFailed
 
     var errorDescription: String? {
         switch self {
@@ -136,6 +160,7 @@ enum HouseArrestError: LocalizedError, Sendable {
         case .directoryDeletionDisabled: "Folders cannot be deleted from this browser. Delete files individually."
         case .invalidFileName: "Enter a valid name without path separators."
         case .fileAlreadyExists: "An item with that name already exists in this folder."
+        case .deleteFailed: "The file could not be deleted. Run the exploit again and retry."
         }
     }
 }
