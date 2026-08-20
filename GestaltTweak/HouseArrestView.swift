@@ -54,7 +54,10 @@ private struct HouseArrestDirectoryView: View {
                 List {
                     ForEach(visibleItems) { item in
                         if item.isDirectory {
-                            NavigationLink { HouseArrestDirectoryView(directory: item.url, title: item.name) } label: { itemRow(item) }
+                            NavigationLink {
+                                HouseArrestDirectoryView(directory: item.url, title: item.name)
+                                    .environmentObject(cache)
+                            } label: { itemRow(item) }
                                 .contextMenu { renameButton(for: item) }
                         } else {
                             NavigationLink { HouseArrestFileView(item: item) } label: { itemRow(item) }

@@ -52,6 +52,15 @@ enum HouseArrestService {
             return containerItems(containerPaths.map { URL(fileURLWithPath: $0, isDirectory: true) })
         }
 
+        if let urls = try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey],
+            options: []
+        ) {
+            return urls.map { HouseArrestItem(url: $0) }
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+
         let lease = try acquire(directory.path)
         defer { lease.invalidate() }
         let urls = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: [])
