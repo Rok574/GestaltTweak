@@ -574,7 +574,7 @@ private struct BackupRow: View {
                 Text(backup.createdAt, format: .dateTime.year().month().day().hour().minute().second())
                 Text(ByteCountFormatter.string(fromByteCount: backup.byteCount, countStyle: .file))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(.label))
             }
             Spacer()
             ShareLink(item: backup.url) {
