@@ -184,6 +184,8 @@ private struct HouseArrestFileView: View {
     @State private var textEncoding: String.Encoding = .utf8
     @State private var plistFormat: PropertyListSerialization.PropertyListFormat?
     @State private var errorMessage: String?
+    @State private var exportPresented = false
+    @State private var exportDocument = HouseArrestExportDocument(data: Data())
 
     var body: some View {
         Group {
@@ -199,10 +201,21 @@ private struct HouseArrestFileView: View {
                 } else if HouseArrestService.isEditable(item.url) {
                     Button { beginEditing() } label: { Image(systemName: "square.and.pencil") }.accessibilityLabel("Edit file")
                 }
-                ShareLink(item: item.url) { Image(systemName: "square.and.arrow.up") }
+                Button { prepareExport() } label: { Image(systemName: "folder.badge.plus") }
+                    .accessibilityLabel("Save to Files")
             }
         }
         .task { load() }
+        .fileExporter(
+            isPresented: $exportPresented,
+            document: exportDocument,
+            contentType: .data,
+            defaultFilename: item.name
+        ) { result in
+            if case .failure(let error) = result {
+                errorMessage = error.localizedDescription
+            }
+        }
         .alert("File Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(errorMessage ?? "") }
@@ -210,6 +223,14 @@ private struct HouseArrestFileView: View {
 
     private func load() { do { text = try decode(HouseArrestService.read(item.url)) } catch { errorMessage = error.localizedDescription } }
     private func beginEditing() { do { text = try decode(HouseArrestService.read(item.url)); editing = true } catch { errorMessage = error.localizedDescription } }
+    private func prepareExport() {
+        do {
+            exportDocument = HouseArrestExportDocument(data: try HouseArrestService.read(item.url))
+            exportPresented = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 
     private func decode(_ data: Data) throws -> String {
         if item.url.pathExtension.lowercased() == "plist" {
@@ -261,5 +282,23 @@ private struct HouseArrestFileView: View {
             if code < 32 || (code >= 0x7F && code <= 0x9F) { count += 1 }
         }
         return Double(invalidCount) / Double(value.unicodeScalars.count) < 0.01
+    }
+}
+
+private struct HouseArrestExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.data] }
+
+    let data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
     }
 }
