@@ -72,8 +72,8 @@ struct ContentView: View {
                                 moduleRow(
                                     icon: "folder.badge.gearshape",
                                     tint: .teal,
-                                    title: "App Files",
-                                    subtitle: "Import, edit, and delete supported files"
+                                    title: "HouseArrest",
+                                    subtitle: "Browse, import, edit, and delete files"
                                 )
                             }
                         }

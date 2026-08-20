@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 struct HouseArrestView: View {
     var body: some View {
-        NavigationStack { HouseArrestDirectoryView(directory: HouseArrestService.applicationsRoot, title: "App Containers") }
+        NavigationStack { HouseArrestDirectoryView(directory: HouseArrestService.applicationsRoot, title: "HouseArrest") }
     }
 }
 
@@ -127,6 +127,7 @@ private struct HouseArrestFileView: View {
     let item: HouseArrestItem
     @State private var text = ""
     @State private var editing = false
+    @State private var textEncoding: String.Encoding = .utf8
     @State private var plistFormat: PropertyListSerialization.PropertyListFormat?
     @State private var errorMessage: String?
 
@@ -168,8 +169,13 @@ private struct HouseArrestFileView: View {
             let xml = try PropertyListSerialization.data(fromPropertyList: object, format: .xml, options: 0)
             return String(decoding: xml, as: UTF8.self)
         }
-        guard let value = String(data: data, encoding: .utf8) else { throw HouseArrestError.accessDenied("Unsupported binary file") }
-        return value
+        let encodings: [String.Encoding] = [.utf8, .utf16, .utf16LittleEndian, .utf16BigEndian, .utf32, .utf32LittleEndian, .utf32BigEndian, .ascii, .isoLatin1, .windowsCP1252, .macOSRoman]
+        for encoding in encodings {
+            guard let value = String(data: data, encoding: encoding), looksLikeText(value) else { continue }
+            textEncoding = encoding
+            return value
+        }
+        throw HouseArrestError.accessDenied("Unsupported binary file")
     }
 
     private func save() {
@@ -185,11 +191,21 @@ private struct HouseArrestFileView: View {
                 }
                 data = try PropertyListSerialization.data(fromPropertyList: object, format: format, options: 0)
             } else {
-                guard let encoded = text.data(using: .utf8) else { throw HouseArrestError.accessDenied("Could not encode text") }
+                guard let encoded = text.data(using: textEncoding) else { throw HouseArrestError.accessDenied("Could not encode text") }
                 data = encoded
             }
             try HouseArrestService.write(data, to: item.url)
             editing = false
         } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func looksLikeText(_ value: String) -> Bool {
+        guard !value.isEmpty else { return true }
+        let invalidCount = value.unicodeScalars.reduce(into: 0) { count, scalar in
+            let code = scalar.value
+            if code == 9 || code == 10 || code == 13 { return }
+            if code < 32 || (code >= 0x7F && code <= 0x9F) { count += 1 }
+        }
+        return Double(invalidCount) / Double(value.unicodeScalars.count) < 0.01
     }
 }

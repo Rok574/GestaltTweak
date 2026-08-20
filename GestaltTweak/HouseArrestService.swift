@@ -35,6 +35,16 @@ enum HouseArrestService {
     static let applicationsRoot = URL(fileURLWithPath: "/var/mobile/Containers/Data/Application", isDirectory: true)
 
     nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
+        if directory.standardizedFileURL.path == applicationsRoot.path {
+            let containerPaths = GTListContainers(directory.path, 2_000_000) ?? []
+            if !containerPaths.isEmpty {
+                return containerPaths
+                    .map { URL(fileURLWithPath: $0, isDirectory: true) }
+                    .map { HouseArrestItem(url: $0, isDirectory: true, displayName: bundleIdentifier(for: $0) ?? $0.lastPathComponent) }
+                    .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            }
+        }
+
         let lease = try acquire(directory.path)
         defer { lease.invalidate() }
         let urls = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey, .contentTypeKey], options: [])
