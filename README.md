@@ -9,44 +9,24 @@
 
 ---
 
-GestaltTweak is a native SwiftUI app for iOS that edits `com.apple.MobileGestalt.plist` directly on-device. By utilizing local sandbox escape methods (`bad_query` with a `cmg` fallback), you can toggle system features, customize device subtypes, and manage configuration backups without needing to be on computer.
+**Supported IOS Versions:**
 
-## Features
-
-- **Capability Toggles:** Quickly enable features like Dynamic Island, Always-On Display, boot chimes, and charge limits.
-- **Device Identity:** Change your device subtype and model name on the fly.
-- **Advanced Field Editor:** Search and modify raw MobileGestalt keys manually.
-- **Backup & Restore:** Automatic backups before any changes, plus full restore management.
-- **PosterBoard Support:** Import and apply custom wallpaper packs ("tendies").
-- **Customization & Persistence:** Integrated respring tool, exploit method selection, and persistent toggle management.
-
----
-
-<p style="color: red;">
-  ⚠️ <strong>Disclaimer &amp; Warning</strong><br>
-  GestaltTweak uses private APIs and modifies system cache files. Modifying incorrect keys can cause feature instability, UI glitches, or bootloops. Use this tool responsibly and at your own risk. Always ensure you have a backup saved.
-</p>
+| iOS Version | Support |
+|---|---|
+| iOS ≤ 26.x | unsupported |
+| iOS 27.0 dev beta 1–4 | supported |
+| iOS 27.0 public beta 1–2 | supported |
+| iOS 27.0 dev beta ≥ 5 | unsupported |
+| iOS 27.0 public beta ≥ 3 | unsupported |
 
 ---
 
-## Compatibility
+**Implemented:**
 
-This app relies on specific kernel/sandbox vulnerabilities and supports **iOS / iPadOS 27 Developer Betas 1 through 4** only.
-
-* **Supported Builds:** `24A5355q`, `24A5370h`, `24A5380h`, `24A5380i`, `24A5380l`, `24A5390f`
-
-*Note: Running GestaltTweak on unsupported iOS versions will result in an "Unsupported OS Version" warning, and exploit execution will be blocked.*
-
----
-
-## Troubleshooting
-
-- **"Unsupported OS Version"**  
-  Your device is running an iOS build outside the supported beta range listed above.
-- **"Unable to Read MobileGestalt"**  
-  The sandbox escape failed to initialize. Try restarting your device, reinstalling the application, or verifying your build version.
-- **Tweaks Revert After a Reboot**  
-  This is expected behavior. The MobileGestalt cache is rebuilt by iOS upon reboot. Re-apply your tweaks or enable the persist option in app settings.
+- PosterBoard
+- MobileGestalt Editor
+- HouseArrest File Browser
+- System App Opener
 
 ---
 
