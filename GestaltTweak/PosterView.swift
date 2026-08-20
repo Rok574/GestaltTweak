@@ -325,7 +325,7 @@ struct TendiesView: View {
                         case .failure:
                             Image(systemName: "photo")
                                 .font(.title2)
-                                .foregroundStyle(Color(.label))
+                                .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 300)
                                 .background(.quaternary)
@@ -345,7 +345,7 @@ struct TendiesView: View {
 
                         Image(systemName: "chevron.right")
                             .font(.footnote)
-                            .foregroundStyle(Color(.label))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -470,7 +470,7 @@ struct TendiesDetail: View {
                     if let description = wallpaper.description, !description.isEmpty {
                         Text(description)
                             .font(.body)
-                            .foregroundStyle(Color(.label))
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -484,14 +484,14 @@ struct TendiesDetail: View {
 
                 HStack(spacing: 6) {
                     Image(systemName: "number")
-                        .foregroundStyle(Color(.label))
+                        .foregroundStyle(.secondary)
                     Text(String(wallpaper.id))
                 }
 
                 if let contest = wallpaper.contest {
                     HStack(spacing: 6) {
                         Image(systemName: "trophy")
-                            .foregroundStyle(Color(.label))
+                            .foregroundStyle(.secondary)
                         Text(contest)
                     }
                 }
