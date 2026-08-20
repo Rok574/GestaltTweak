@@ -37,8 +37,6 @@ enum HouseArrestService {
     nonisolated static func list(_ directory: URL) throws -> [HouseArrestItem] {
         let isApplicationsRoot = directory.standardizedFileURL.path == applicationsRoot.path
 
-        // The app-container root is discovered through the inode enumerator.
-        // It is not itself a bad_query-grantable container path.
         if isApplicationsRoot {
             if let urls = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
                 let containers = urls.filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
@@ -100,8 +98,6 @@ enum HouseArrestService {
         guard !item.isDirectory else { throw HouseArrestError.directoryDeletionDisabled }
         let parentLease = try acquire(item.url.deletingLastPathComponent().path)
         defer { parentLease.invalidate() }
-        let itemLease = try acquire(item.url.path)
-        defer { itemLease.invalidate() }
         try FileManager.default.removeItem(at: item.url)
         if FileManager.default.fileExists(atPath: item.url.path) {
             throw HouseArrestError.deleteFailed
@@ -177,11 +173,11 @@ enum HouseArrestError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         switch self {
-        case .accessDenied(let path): "House Arrest could not access \(path). Run the exploit again and retry."
+        case .accessDenied(let path): "Could not access \(path). Check that the app container is accessible and try again."
         case .directoryDeletionDisabled: "Folders cannot be deleted from this browser. Delete files individually."
         case .invalidFileName: "Enter a valid name without path separators."
         case .fileAlreadyExists: "An item with that name already exists in this folder."
-        case .deleteFailed: "The file could not be deleted. Run the exploit again and retry."
+        case .deleteFailed: "The file could not be deleted. Please try again."
         }
     }
 }

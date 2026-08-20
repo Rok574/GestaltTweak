@@ -188,11 +188,17 @@ private struct HouseArrestFileView: View {
     @State private var cautionData: Data?
     @State private var exportPresented = false
     @State private var exportDocument = HouseArrestExportDocument(data: Data())
+    @State private var isLoading = true
 
     var body: some View {
         Group {
-            if editing { TextEditor(text: $text).font(.system(size: 13, design: .monospaced)) }
-            else { ScrollView { Text(text).font(.system(size: 13, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding() } }
+            if isLoading {
+                ProgressView("Loading...")
+            } else if editing {
+                TextEditor(text: $text).font(.system(size: 13, design: .monospaced))
+            } else {
+                ScrollView { Text(text).font(.system(size: 13, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding() }
+            }
         }
         .navigationTitle(item.name)
         .toolbar {
@@ -237,7 +243,16 @@ private struct HouseArrestFileView: View {
         }
     }
 
-    private func load() { do { text = try decode(HouseArrestService.read(item.url)) } catch { errorMessage = error.localizedDescription } }
+    private func load() {
+        isLoading = true
+        do {
+            text = try decode(HouseArrestService.read(item.url))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
     private func beginEditing() {
         do {
             let data = try HouseArrestService.read(item.url)
@@ -253,6 +268,7 @@ private struct HouseArrestFileView: View {
         do { text = try decode(data); editing = true }
         catch { errorMessage = error.localizedDescription }
     }
+
     private func prepareExport() {
         do {
             exportDocument = HouseArrestExportDocument(data: try HouseArrestService.read(item.url))
@@ -264,6 +280,7 @@ private struct HouseArrestFileView: View {
 
     private func decode(_ data: Data) throws -> String {
         binaryEditing = false
+        plistFormat = nil
         if let plist = try? decodePlist(data) {
             return plist
         }
