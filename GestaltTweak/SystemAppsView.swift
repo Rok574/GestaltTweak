@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 nonisolated private struct SystemApp: Identifiable, Sendable {
     let name: String
@@ -8,22 +9,71 @@ nonisolated private struct SystemApp: Identifiable, Sendable {
 }
 
 private enum SystemAppLauncher {
-    static func open(bundleID: String) -> Bool {
+    nonisolated static func open(bundleID: String) -> Bool {
         guard let workspaceClass = NSClassFromString("LSApplicationWorkspace") as? NSObject.Type,
               let workspace = workspaceClass.perform(NSSelectorFromString("defaultWorkspace"))?.takeUnretainedValue() as? NSObject else {
             return false
         }
+
+                let proxySelector = NSSelectorFromString("applicationProxyForBundleIdentifier:")
+                guard workspace.responds(to: proxySelector),
+                            workspace.perform(proxySelector, with: bundleID) != nil else {
+                        return false
+                }
+
         let selector = NSSelectorFromString("openApplicationWithBundleID:")
         guard workspace.responds(to: selector) else { return false }
-        return workspace.perform(selector, with: bundleID) != nil
+                guard let signature = workspace.methodSignature(for: selector) else { return false }
+                let invocation = NSInvocation(methodSignature: signature)
+                invocation.target = workspace
+                invocation.selector = selector
+                var argument = bundleID as NSString
+                invocation.setArgument(&argument, at: 2)
+                invocation.invoke()
+                var opened = false
+                invocation.getReturnValue(&opened)
+                return opened
+    }
+
+    nonisolated static func discoverAppleApps() -> [SystemApp]? {
+        guard let workspaceClass = NSClassFromString("LSApplicationWorkspace") as? NSObject.Type,
+              let workspace = workspaceClass.perform(NSSelectorFromString("defaultWorkspace"))?.takeUnretainedValue() as? NSObject else {
+            return nil
+        }
+        let selector = NSSelectorFromString("allApplications")
+        let bundleSelector = NSSelectorFromString("bundleIdentifier")
+        guard workspace.responds(to: selector),
+              let applications = workspace.perform(selector)?.takeUnretainedValue() as? [NSObject] else {
+            return nil
+        }
+
+        return applications.compactMap { application in
+            guard let identifier = application.perform(bundleSelector)?.takeUnretainedValue() as? String,
+                  identifier.hasPrefix("com.apple.") else {
+                return nil
+            }
+            let shortName = String(identifier.dropFirst("com.apple.".count))
+            return SystemApp(name: shortName.isEmpty ? identifier : shortName, bundleID: identifier)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 }
 
 struct SystemAppsView: View {
     @State private var apps: [SystemApp] = []
     @State private var isLoading = true
+    @State private var query = ""
     @State private var customBundleID = ""
     @State private var errorMessage: String?
+
+    private var filteredApps: [SystemApp] {
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return apps }
+        return apps.filter {
+            $0.name.localizedCaseInsensitiveContains(value) ||
+            $0.bundleID.localizedCaseInsensitiveContains(value)
+        }
+    }
 
     var body: some View {
         List {
@@ -33,19 +83,26 @@ struct SystemAppsView: View {
                 } else if apps.isEmpty {
                     Text("No com.apple apps were found.")
                         .foregroundStyle(.secondary)
+                } else if filteredApps.isEmpty {
+                    ContentUnavailableView.search
                 } else {
-                    ForEach(apps) { app in
-                    Button { open(app.bundleID) } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(app.name)
-                                Text(app.bundleID).font(.caption).foregroundStyle(.secondary)
+                    ForEach(filteredApps) { app in
+                        Button { open(app.bundleID) } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(app.name)
+                                        .font(.body.weight(.medium))
+                                    Text(app.bundleID)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            } icon: {
+                                Image(systemName: "app.fill")
+                                    .foregroundStyle(Color.accentColor)
                             }
-                        } icon: {
-                            Image(systemName: "app.fill").foregroundStyle(Color.accentColor)
                         }
-                    }
-                    .foregroundStyle(.primary)
+                        .foregroundStyle(.primary)
                     }
                 }
             }
@@ -67,6 +124,7 @@ struct SystemAppsView: View {
         .navigationTitle("System Apps")
         .navigationBarTitleDisplayMode(.large)
         .listStyle(.insetGrouped)
+        .searchable(text: $query, prompt: "Search apps or bundle IDs")
         .task { loadApps() }
         .refreshable { loadApps() }
         .alert("Could Not Open App", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
@@ -101,6 +159,9 @@ struct SystemAppsView: View {
 
     private nonisolated static func findSystemApps() async throws -> [SystemApp] {
         try await Task.detached(priority: .userInitiated) {
+            if let discovered = SystemAppLauncher.discoverAppleApps() {
+                return discovered
+            }
             try HouseArrestService.list(HouseArrestService.applicationsRoot)
                 .filter { $0.isDirectory && $0.name.hasPrefix("com.apple.") }
                 .map {
