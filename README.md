@@ -4,7 +4,7 @@
 </h1>
 
 <p align="center">
-  <strong>Modify MobileGestalt On iOS 27 Dev Beta 1-4!</strong>
+  <strong>Modify MobileGestalt On iOS 27 Dev Beta 1-4! (NOTE AI 🥺 )</strong>
 </p>
 
 ---
